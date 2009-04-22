@@ -4,6 +4,13 @@ class Rack::REST::Application
   end
 
   def call(env)
-    Rack::REST::Request.new(@resource, env).response
+    request = Rack::Request.new(env)
+    path_components = request.path_info.sub(/^\//,'').split('/').map {|component| Rack::Utils.unescape(component)}
+    responder = Rack::REST::ResourceResponder.new(@resource, request, path_components)
+    begin
+      catch(:response) { responder.response }
+    rescue
+      [500, {}, []]
+    end
   end
 end
