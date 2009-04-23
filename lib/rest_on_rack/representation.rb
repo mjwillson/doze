@@ -1,3 +1,4 @@
+require 'digest/md5'
 class Rack::REST::Representation
   DEFAULT_TEXT_ENCODING = 'iso-8859-1'
 
@@ -39,5 +40,14 @@ class Rack::REST::Representation
     rescue ::EncodingError
       raise EncodingError, 'Encoding failed'
     end
+  end
+
+  # This is a 'strong' etag in that it's sensitive to the exact bytes of the representation.
+  # Note that etags are per-representation-entity, not per-resource. (even weak etags, which we don't yet support;
+  # 'weak' appears to refer to time-based equivalence for the same entity, rather than equivalence of all entity representations of a resource.)
+  #
+  #  May return nil. Default implementation is an MD5 digest of the entity data.
+  def etag
+    Digest::MD5.hexdigest(@data)
   end
 end
