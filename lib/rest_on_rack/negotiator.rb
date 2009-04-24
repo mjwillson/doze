@@ -1,4 +1,4 @@
-# A negotiator is passed to a resource on behalf of a request, and will choose the representation it prefers from options offered to it by the resource.
+# A negotiator is passed to a resource on behalf of a request, and will choose the entity it prefers from options offered to it by the resource.
 # You can ask it to give you a quality value, or to choose from a list of options. It'll choose from media_types, languages, or combinations of the two.
 class Rack::REST::Negotiator
   def initialize(request, supports_media_type_negotiation=true, supports_language_negotiation=true)
@@ -49,9 +49,9 @@ class Rack::REST::Negotiator
     max_by_non_zero(pairs) {|m,l| quality(m,l)}
   end
 
-  # Like choose, but takes a list of Rack::REST::Representation
-  def choose_representation(representations)
-    max_by_non_zero(representations) {|a| quality(a.media_type, a.language)}
+  # Like choose, but takes a list of Rack::REST::Entity
+  def choose_entity(entities)
+    max_by_non_zero(entities) {|a| quality(a.media_type, a.language)}
   end
 
   private
@@ -97,17 +97,17 @@ class Rack::REST::Negotiator
   #     AcceptHeaderRange.new('iso-8859-1') => 1,
   #     AcceptHeaderRange.new('*') => 0
   #   }
-  #   def negotiate_representation_character_encoding(representation)
+  #   def negotiate_entity_character_encoding(entity)
   #     accept_charset_header = @request.env['HTTP_ACCEPT_CHARSET'] and begin
   #       ranges_qs = parse_accept_header(accept_charset_header, ACCEPT_CHARSET_DEFAULT_QVALUES)
-  #       if representation.supports_re_encoding?
+  #       if entity.supports_re_encoding?
   #         preferred_range, preferred_q = ranges_qs.max {|(r1,q1),(r2,q2)| q1 <=> q2}
   #         preferred_encoding = preferred_range.to_s
-  #         representation.re_encode!(preferred_encoding) if preferred_encoding != '*'
+  #         entity.re_encode!(preferred_encoding) if preferred_encoding != '*'
   #       else
-  #         return unless ranges_qs.any? {|r,q| r === representation.encoding && q > 0}
+  #         return unless ranges_qs.any? {|r,q| r === entity.encoding && q > 0}
   #       end
   #     end
-  #     representation
+  #     entity
   #   end
 end

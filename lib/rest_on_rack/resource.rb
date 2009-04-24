@@ -102,12 +102,10 @@ module Rack::REST::Resource
   def supports_post_on_missing_subresource?(identifier_components);   false; end
   def supports_delete_on_missing_subresource?(identifier_components); false; end
 
-  # Methods to help with negotiation of selected representation
-
   def supports_media_type_negotiation?; false; end
   def supports_language_negotiation?;   false; end
 
-  # Should return a Rack::REST::Representation, or nil if no suitable representation is available.
+  # Should return a Rack::REST::Entity, or nil if no suitable entity representation is available.
   # If supports_language_negotiation? or supports_media_type_negotiation? are true, you will be passed a Rack::REST::Negotiator (see the docs on this class);
   # if you return nil it will then be intepreted as a failure to negotiate a suitable entity representation
   def entity_representation(negotiator=nil)
@@ -120,32 +118,30 @@ module Rack::REST::Resource
   def resource_representation
   end
 
-  # A key method to override; preferred_representation_metadata will be one of metadata_for_available_entity_representations, or nil.
-  #
   # Should be idempotent, and safe ie not have any side-effects visible to the caller.
   #
   # May return:
-  #   * A Rack::REST::Representation as a representation entity of this resource
+  #   * A Rack::REST::Entity as a representation entity of this resource
   #   * Another Rack::REST::Resource as a representation resource of this resource (would correspond to a redirect in HTTP)
   #   * nil, indicating that the resource is missing (although exists? is preferred if you wish to indicate this as it works with methods other than get)
   #
   # The default implementation will call resource_representation to get another resource which may taken as a representation of this one
-  # failing that it'll call entity_representation to get an appropriate Rack::REST::Representation.
+  # failing that it'll call entity_representation to get an appropriate Rack::REST::Entity.
   #
   # negotiator: may be an instance of Rack::REST::Negotiator; see entity_representation
   def get(negotiator=nil)
-    resource_representation || entity_representation(negotiator)
+    resource_representation || (negotiator ? entity_representation : entity_representation(negotiator))
   end
 
   # Called to update the entirity of the this resource to the resource represented by the given representation entity.
-  # Representation will be a entity representation whose media_type has been okayed by accepts_put_with_media_type?
+  # entity will be a new entity representation whose media_type has been okayed by accepts_put_with_media_type?
   #
   # Should be idempotent; Subsequent to a successful put, the following should hold:
-  #   * get should return the updated representation (or an alternative representation with the same resource-level semantics)
+  #   * get should return the updated entity representation (or an alternative representation with the same resource-level semantics)
   #   * parent.resolve_subresource(additional_identifier_components) should return a resource for which the same holds.
   #
   # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
-  def put(representation)
+  def put(entity)
   end
 
   # Called to delete this resource.
@@ -169,7 +165,7 @@ module Rack::REST::Resource
   #  * Otherwise process instructions contained in the given representation entity, returning an anonymous resource describing the results
   # Note: these uses are a bit of a catch-all, not very REST-ful, and discouraged, see other_method.
   #
-  # Representation will be a entity representation whose media_type has been okayed by accepts_post_with_media_type?
+  # entity will be a entity whose media_type has been okayed by accepts_post_with_media_type?
   #
   # Does not need to be idempotent or safe, and should not be assumed to be.
   #
@@ -179,9 +175,9 @@ module Rack::REST::Resource
   #   * nil to indicate success without exposing a resulting resource
   #   * A Rack::REST::Resource without identifier_components, which will be taken to be a returned description of the results of some arbitrary operation performed
   #     (see discouragement above)
-  #   * A Rack::REST::Representation, which will be taken to be a returned description of the results of some arbitrary operation performed
+  #   * A Rack::REST::Entity, which will be taken to be a returned description of the results of some arbitrary operation performed
   #     (this one even more discouraged, but there if you need a quick way to make an arbitrary fixed response)
-  def post(representation)
+  def post(entity)
   end
 
   # This allows you to accept methods other than the standard get/put/post/delete from HTTP. When the resource is exposed over a protocol (or requested by a client)
@@ -200,11 +196,11 @@ module Rack::REST::Resource
   # The proposed 'patch' method (for selective update of a resource by a diff-like media type) is a good example of something which meets these criterea.
   # http://greenbytes.de/tech/webdav/draft-dusseault-http-patch-11.html
   #
-  # Representation will be nil, or an entity representation whose media_type has been okayed by accepts_method_with_media_type?(method_name, ..)
+  # entity will be nil, or an entity whose media_type has been okayed by accepts_method_with_media_type?(method_name, ..)
   #
   # Return options are the same as for post, as are their interpretations, with the exception that a resource returned will not be assumed to be newly-created.
   # (we're taking the stance that you should be using post or put for creation of new resources)
-  def other_method(method_name, representation=nil)
+  def other_method(method_name, entity=nil)
   end
 
   def accepts_method_with_media_type?(resource_method, media_type)

@@ -61,8 +61,8 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def request_representation
-    @request_representation ||= Rack::REST::Representation.new(@request.body, :media_type => @request.media_type, :encoding => @request.content_charset) unless @request.body.empty?
+  def request_entity
+    @request_entity ||= Rack::REST::Entity.new(@request.body, :media_type => @request.media_type, :encoding => @request.content_charset) unless @request.body.empty?
   end
 
   def check_resource_preconditions(failure_status=412)
@@ -75,15 +75,15 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def check_representation_preconditions(representation=nil, failure_status=412)
+  def check_entity_preconditions(entity=nil, failure_status=412)
     if_match      = @request.env['HTTP_IF_MATCH']
     if_none_match = @request.env['HTTP_IF_NONE_MATCH']
     return unless if_match || if_none_match
 
-    representation ||= get_preferred_representation(@resource)
-    return unless representation.is_a?(Rack::REST::Representation) # if the result would have been a redirect, If-None-Match etc don't apply
+    entity ||= get_preferred_representation(@resource)
+    return unless entity.is_a?(Rack::REST::Entity) # if the result would have been a redirect, If-None-Match etc don't apply
 
-    etag = representation.etag
+    etag = entity.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
     if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     Rack::REST::Utils.quote(etag)))) ||
@@ -105,24 +105,24 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   def make_representation_of_resource_response(resource, representation, head_only=false)
     case representation
-    when Rake::REST::Representation
-      make_entity_representation_response(representation, resource, head_only)
-    when Rake::REST::Resource
+    when Rack::REST::Entity
+      make_entity_response(representation, resource, head_only)
+    when Rack::REST::Resource
       make_redirect_response(representation, 303, head_only)
     end
   end
 
-  def make_entity_representation_response(representation, resource=nil, head_only=false)
-    content_type = representation.media_type
-    content_type << "; charset=#{representation.encoding}" if representation.encoding
+  def make_entity_response(entity, resource=nil, head_only=false)
+    content_type = entity.media_type
+    content_type << "; charset=#{entity.encoding}" if entity.encoding
     last_modified = resource && resource.last_modified
-    etag = representation.etag
+    etag = entity.etag
 
-    headers = {'Content-Type' => content_type, 'Content-Length' => representation.bytesize}
+    headers = {'Content-Type' => content_type, 'Content-Length' => entity.bytesize}
     headers['ETag'] = Rack::REST::Utils.quote(etag) if etag
     headers['Last-Modified'] = last_modified.httpdate if last_modified
 
-    [200, headers, head_only ? [] : [representation.data]]
+    [200, headers, head_only ? [] : [entity.data]]
   end
 
   def make_redirect_response(resource, status=303, head_only=false)
@@ -140,8 +140,8 @@ class Rack::REST::ResourceResponder < Rack::Request
         representation = get_preferred_representation(result)
         make_representation_of_resource_response(result, representation, false)
       end
-    when Rack::REST::Representation
-      make_entity_representation_response(result)
+    when Rack::REST::Entity
+      make_entity_response(result)
     when nil
       make_empty_response
     end
@@ -180,7 +180,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def put_response
-    rep = request_representation
+    rep = request_entity
     check_method_support('put', rep && rep.media_type)
     check_resource_preconditions if @resource.exists?
     @resource.put(rep)
@@ -197,7 +197,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def post_response
-    rep = request_representation
+    rep = request_entity
     check_method_support('post', rep && rep.media_type)
     check_resource_preconditions
     result = @resource.post(rep)
@@ -207,7 +207,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def other_response(resource_method)
-    rep = request_representation
+    rep = request_entity
     check_method_support(resource_method, rep && rep.media_type)
     check_resource_preconditions
     result = @resource.other_method(resource_method, rep)
