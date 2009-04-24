@@ -3,6 +3,8 @@ Vary/Expires/Cache-Control
 ErrorResource allowing media type negotiation etc for errors
 Range requests
 
+Proper auth
+
 ORM resource wrappers
 
 Test suite

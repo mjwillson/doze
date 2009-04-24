@@ -104,36 +104,20 @@ module Rack::REST::Resource
 
   # Methods to help with negotiation of selected representation
 
-  def available_media_types
-    media_type ? [media_type] : []
+  def supports_media_type_negotiation?; false; end
+  def supports_language_negotiation?;   false; end
+
+  # Should return a Rack::REST::Representation, or nil if no suitable representation is available.
+  # If supports_language_negotiation? or supports_media_type_negotiation? are true, you will be passed a Rack::REST::Negotiator (see the docs on this class);
+  # if you return nil it will then be intepreted as a failure to negotiate a suitable entity representation
+  def entity_representation(negotiator=nil)
   end
 
-  # convenience hook to define a single available media_type
-  def media_type
-  end
-
-  # An available language of nil indicates that representations exist, but with unknown or no language
-  def available_languages
-    [language]
-  end
-
-  # Convenience hook to define a single available language (nil = unknown / no language is available)
-  def language
-  end
-
-  # you can override if media_type and language availability are not independent choices; default implementation assumes that all combinations are available
-  def metadata_for_available_entity_representations
-    available_media_types.map {|media_type| available_languages.map {|language| :media_type => media_type, :language => language}}.flatten
-  end
-
-  # Should return a Rack::REST::Representation, or nil if none is available.
-  # preferred_representation_metadata will be one of metadata_for_available_entity_representations, or nil indicating no preference.
-  def entity_representation(preferred_representation_metadata)
-  end
-
-  # In the absence of a suitable entity_representation, you have the opportunity to return another resource which may taken as a representation of this one.
-  # The returned resource must have an identifier; in the case of HTTP this would lead to a redirect to that resource.
-  def resource_representation(preferred_representation_metadata)
+  # You have the opportunity to return another resource which may taken as a representation of this one. This will take preference over
+  # an entity_representation response (although you can override get)
+  #
+  # A returned resource must have an identifier; in the case of HTTP this would lead to a redirect to that resource.
+  def resource_representation
   end
 
   # A key method to override; preferred_representation_metadata will be one of metadata_for_available_entity_representations, or nil.
@@ -145,10 +129,12 @@ module Rack::REST::Resource
   #   * Another Rack::REST::Resource as a representation resource of this resource (would correspond to a redirect in HTTP)
   #   * nil, indicating that the resource is missing (although exists? is preferred if you wish to indicate this as it works with methods other than get)
   #
-  # The default implementation will call entity_representation(preferred_representation_metadata) to get an appropriate Rack::REST::Representation;
-  # failing that it'll call resource_representation to get another resource which may taken as a representation of this one (see redirect above)
-  def get(preferred_representation_metadata=nil)
-    entity_representation(preferred_representation_metadata) || resource_representation(preferred_representation_metadata)
+  # The default implementation will call resource_representation to get another resource which may taken as a representation of this one
+  # failing that it'll call entity_representation to get an appropriate Rack::REST::Representation.
+  #
+  # negotiator: may be an instance of Rack::REST::Negotiator; see entity_representation
+  def get(negotiator=nil)
+    resource_representation || entity_representation(negotiator)
   end
 
   # Called to update the entirity of the this resource to the resource represented by the given representation entity.

@@ -1,3 +1,4 @@
+# These are various utility functions which aid the conversion back and forth between HTTP syntax and the more abstracted ruby representations we use.
 module Rack::REST::Utils
   def self.path_to_identifier_components(path)
     path.sub(/^\//,'').split('/').map {|component| Rack::Utils.unescape(component)}
