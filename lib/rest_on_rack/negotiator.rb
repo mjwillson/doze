@@ -10,7 +10,7 @@ class Rack::REST::Negotiator
       [[Object, 0, 1.0]]
     end
 
-    accept_language_header = request.env['HTTP_ACCEPT_LANGUAGE'] and begin
+    accept_language_header = request.env['HTTP_ACCEPT_LANGUAGE']
     @language_criterea = if accept_language_header && supports_language_negotiation
       parse_accept_header(accept_language_header).sort_by {|matcher,specificity,q| -specificity}
       @negotiation_requested = true

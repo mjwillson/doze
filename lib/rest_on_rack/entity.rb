@@ -22,10 +22,6 @@ class Rack::REST::Entity
     @media_type =~ /^text\// || @media_type =~ /^application\/.*(yaml|json|javascript)$/
   end
 
-  def bytesize
-    @data.respond_to?(:bytesize) ? @data.bytesize : @data.size
-  end
-
   class EncodingError < StandardError; end
 
   def supports_re_encoding?

@@ -1,5 +1,3 @@
-require 'rest_on_rack/request'
-
 module Rack::REST::Resource
 
   # You can call this within your constructor, if you want the resource to know about its parent scope and/or resource identifier (via identifier_components).

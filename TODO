@@ -1,9 +1,10 @@
 HTTP features:
 Vary/Expires/Cache-Control
-ErrorResource allowing media type negotiation etc for errors
 Range requests
 
 Proper auth
+
+Put to missing subresource etc
 
 ORM resource wrappers
 

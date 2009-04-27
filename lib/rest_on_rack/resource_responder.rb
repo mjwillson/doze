@@ -1,8 +1,16 @@
 # This corresponds one-to-one with a Resource (and a HTTP request to that resource or a subresource), and wraps it with methods for responding to that HTTP request.
 
 require 'time' # httpdate
+require 'rest_on_rack/utils'
+require 'rest_on_rack/resource'
+require 'rest_on_rack/entity'
+require 'rest_on_rack/response'
+require 'rest_on_rack/negotiator'
+require 'rest_on_rack/resource/error'
 
 class Rack::REST::ResourceResponder < Rack::Request
+  include Rack::REST::Utils
+
   attr_reader :root_resource, :request
 
   def initialize(resource, request, identifier_components)
@@ -15,8 +23,17 @@ class Rack::REST::ResourceResponder < Rack::Request
   # I think the logic is actually more readable this way; there are a lot of different points along the process where a
   # request can fail with a particular response code, and it saves us having to indicate (and check for) a distinct failure
   # response type from each function call along the way
-  def throw_response(status, headers={}, body=nil)
-    throw(:response, [status, headers, body ? [body] : []])
+  def throw_error_response(status, headers={})
+    throw(:response, error_response(status, headers))
+  end
+
+  # We use a special resource class for errors to enable content type negotiation for them
+  def error_response(status, headers={})
+    error_resource = Rack::REST::Resource::Error.new(status)
+    error_responder = Rack::REST::ResourceResponder.new(error_resource, @request)
+    response = error_responder.respond
+    response.head_only = true if request_method == 'HEAD'
+    response
   end
 
   def respond
@@ -40,9 +57,9 @@ class Rack::REST::ResourceResponder < Rack::Request
   # some general request and response helpers
 
   def check_method_support(resource_method, media_type=nil)
-    throw_response(501) unless @resource.recognizes_method?(resource_method)
-    throw_response(405, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
-    throw_response(415) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
+    throw_error_response(501) unless @resource.recognizes_method?(resource_method)
+    throw_error_response(405, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
+    throw_error_response(415) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
   end
 
   def allow_header(resource_methods)
@@ -50,7 +67,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     # We support OPTIONS for free, and HEAD for free if GET is supported
     methods << 'HEAD' if methods.include?('GET')
     methods << 'OPTIONS'
-    {'Allow': methods.join(', ')}
+    {'Allow' => methods.join(', ')}
   end
 
   # We allow other request methods to be tunnelled over POST via a couple of mechanisms:
@@ -71,7 +88,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     if_unmodified_since = @request.env['HTTP_IF_UNMODIFIED_SINCE']
     if (if_modified_since   && last_modified <= Time.httpdate(if_modified_since)) ||
        (if_unmodified_since && last_modified >  Time.httpdate(if_unmodified_since)) then
-      throw_response(failure_status)
+      throw_error_response(failure_status)
     end
   end
 
@@ -86,9 +103,9 @@ class Rack::REST::ResourceResponder < Rack::Request
     etag = entity.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
-    if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     Rack::REST::Utils.quote(etag)))) ||
-       (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(Rack::REST::Utils.quote(etag))))) then
-      throw_response(failure_status)
+    if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     quote(etag)))) ||
+       (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(quote(etag))))) then
+      throw_error_response(failure_status)
     end
   end
 
@@ -97,69 +114,49 @@ class Rack::REST::ResourceResponder < Rack::Request
     negotiator = (s_mtype || s_lang) && Rack::REST::Negotiator.new(@request, s_mtype, s_lang)
 
     resource.get(negotiator) or if negotiator && negotiator.negotiation_requested?
-      throw_response(406)
+      throw_error_response(406)
     else
-      throw_response(status_if_missing)
+      throw_error_response(status_if_missing)
     end
   end
 
-  def make_representation_of_resource_response(resource, representation, head_only=false)
+  def make_representation_of_resource_response(resource, representation)
+    response = Rack::REST::Response.new
+    last_modified = resource && resource.last_modified
+    response.headers['Last-Modified'] = last_modified.httpdate if last_modified
+
     case representation
     when Rack::REST::Entity
-      make_entity_response(representation, resource, head_only)
+      response.entity = representation
     when Rack::REST::Resource
-      make_redirect_response(representation, 303, head_only)
+      response.set_redirect(representation)
     end
-  end
-
-  def make_entity_response(entity, resource=nil, head_only=false)
-    content_type = entity.media_type
-    content_type << "; charset=#{entity.encoding}" if entity.encoding
-    last_modified = resource && resource.last_modified
-    etag = entity.etag
-
-    headers = {'Content-Type' => content_type, 'Content-Length' => entity.bytesize}
-    headers['ETag'] = Rack::REST::Utils.quote(etag) if etag
-    headers['Last-Modified'] = last_modified.httpdate if last_modified
-
-    [200, headers, head_only ? [] : [entity.data]]
-  end
-
-  def make_redirect_response(resource, status=303, head_only=false)
-    raise 'Resource specified as a representation must have identity in order to redirect to it' unless resource.has_identifier?
-    path = Rack::REST::Utils.identifier_components_to_uri(@request, resource.identifier_components)
-    [status, {'Location' => uri}, []]
+    response
   end
 
   def make_general_result_response(result, status_for_resource_redirect_result=303)
     case result
     when Rack::REST::Resource
       if result.has_identifier?
-        make_redirect_response(result, status_for_resource_redirect_result)
+        Rack::REST::Response.new_redirect(result, status_for_resource_redirect_result)
       else
         representation = get_preferred_representation(result)
         make_representation_of_resource_response(result, representation, false)
       end
     when Rack::REST::Entity
-      make_entity_response(result)
+      Rack::REST::Response.new_from_entity(result)
     when nil
-      make_empty_response
+      Rack::REST::Response.new_empty
     end
-  end
-
-
-  def make_empty_response(status=204)
-    [status, {}, []]
   end
 
   def respond_to_direct_request
     case request_method
     # HTTP methods for which we provide special support at this layer
-    when 'OPTIONS'  then options_response
-    when 'HEAD'     then get_response(true)
-    when 'GET'      then get_response
-    when 'PUT'      then put_response
-    when 'DELETE'   then delete_response
+    when 'GET','HEAD' then get_response
+    when 'PUT'        then put_response
+    when 'DELETE'     then delete_response
+    when 'OPTIONS'    then options_response
     else other_response(method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
     end
   end
@@ -169,14 +166,16 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def get_response(head_only=false)
-    throw_response(404) unless @resource.exists?
+    throw_error_response(404) unless @resource.exists?
     check_method_support('get')
     check_resource_preconditions(304)
 
     representation = get_preferred_representation(@resource, 404)
     check_representation_preconditions(representation)
 
-    make_representation_of_resource_response(@resource, representation, head_only)
+    response = make_representation_of_resource_response(@resource, representation)
+    response.head_only = true if request_method == 'HEAD'
+    response
   end
 
   def put_response
@@ -184,7 +183,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     check_method_support('put', rep && rep.media_type)
     check_resource_preconditions if @resource.exists?
     @resource.put(rep)
-    make_empty_response
+    Rack::REST::Response.new_empty
   end
 
   def delete_response
@@ -193,7 +192,7 @@ class Rack::REST::ResourceResponder < Rack::Request
       check_resource_preconditions
       @resource.delete
     end
-    make_empty_response
+    Rack::REST::Response.new_empty
   end
 
   def post_response
@@ -227,14 +226,14 @@ class Rack::REST::ResourceResponder < Rack::Request
     when 'PUT'      then put_response_on_missing_subresource
     when 'DELETE'   then delete_response_on_missing_subresource
     else other_response_on_missing_subresource(method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
-    end or throw_response(404)
+    end or throw_error_response(404)
   end
 
   def authorize(action)
     if @resource.require_authentication? && !@request.authenticated_user
-      throw_response(401)
+      throw_error_response(401)
     elsif !@resource.authorize(action, @request.authenticated_user)
-      throw_response(403)
+      throw_error_response(403)
     end
   end
 end
