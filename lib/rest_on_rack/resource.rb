@@ -203,15 +203,18 @@ module Rack::REST::Resource
   def last_modified
   end
 
-  # May return a Time object inidicating when the resource expires, or nil if not known.
-  # Default implementation uses expiry_period
-  def expiry_time
-    period = expiry_period && Time.now + period
-  end
+  # nil = no explicit policy, false = explicitly no caching, true = caching yes please
+  def cacheable?; end
+  # false here (when cacheable? is true) implies that private caching only is desired.
+  def publicly_cacheable?; cacheable?; end
 
-  # May return a number of seconds, for use in combination with the default implementation of expiry_time
-  def expiry_period
-  end
+  # Integer seconds, or nil for no explicitly-specified expiry period. Will only be checked if cacheable? is true.
+  # todo: a means to specify the equivalent of 'must-revalidate'
+  def cache_expiry_period; end
+  # You can override public_cache_expiry_period to specify a longer or shorter period for public caches.
+  # Otherwise assumed same as general cache_expiry_period.
+  def public_cache_expiry_period; end
+
 
 
 

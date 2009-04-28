@@ -143,7 +143,27 @@ class Rack::REST::ResourceResponder < Rack::Request
 
     # resource-level caching metadata headers
     last_modified = resource.last_modified and response.headers['Last-Modified'] = last_modified.httpdate
-    expiry_time   = resource.expiry_time   and response.headers['Expires']       = expiry_time.httpdate
+    case resource.cacheable?
+    when true
+      expiry_period = resource.cache_expiry_period
+      if resource.publicly_cacheable?
+        cache_control = 'public'
+        if expiry_period
+          cache_control << ", max-age=#{expiry_period}"
+          public_expiry_period = resource.public_cache_expiry_period
+          cache_control << ", s-maxage=#{public_expire_period}" if public_expiry_period
+        end
+      else
+        cache_control = 'private'
+        cache_control << ", max-age=#{expiry_period}" if expiry_period
+      end
+
+      response.headers['Expires'] = (Time.now + expiry_period).httpdate if expiry_period
+      response.headers['Cache-Control'] = cache_control
+    when false
+      response.headers['Expires'] = 'Thu, 01 Jan 1970 00:00:00 GMT' # Beginning of time woop woop
+      response.headers['Cache-Control'] = 'no-cache, max-age=0'
+    end
 
     case representation
     when Rack::REST::Entity

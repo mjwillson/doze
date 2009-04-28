@@ -12,6 +12,7 @@ class Rack::REST::Response
 
   def finish(head_only=@head_only)
     header["Content-Length"] ||= content_length unless @status == STATUS_NO_CONTENT || @status == STATUS_NOT_MODIFIED
+    header['Date'] = Time.now.httpdate
     [@status, @headers.to_hash, head_only ? [] : [@body]]
   end
 
