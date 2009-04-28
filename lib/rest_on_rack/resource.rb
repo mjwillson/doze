@@ -86,20 +86,6 @@ module Rack::REST::Resource
     STANDARD_RESTFUL_METHODS.filter {|method| supports_method?(method)}
   end
 
-  def supports_method_on_missing_subresource?(method, identifier_components)
-    supports = :"supports_#{method}"
-    respond_to?(supports) && send(supports, identifier_components)
-  end
-
-  def supported_methods_on_missing_subresource(identifier_components)
-    STANDARD_RESTFUL_METHODS.filter {|method| supports_method_on_missing_subresource?(method, identifier_components)}
-  end
-
-  def supports_get_on_missing_subresource?(identifier_components);    false; end
-  def supports_put_on_missing_subresource?(identifier_components);    false; end
-  def supports_post_on_missing_subresource?(identifier_components);   false; end
-  def supports_delete_on_missing_subresource?(identifier_components); false; end
-
   def supports_media_type_negotiation?; false; end
   def supports_language_negotiation?;   false; end
 
@@ -209,6 +195,8 @@ module Rack::REST::Resource
   def accepts_put_with_media_type?(media_type); false; end
   def accepts_post_with_media_type?(media_type); false; end
 
+
+
   # Caching and modification-related metadata
 
   # May return a Time object inidicating the last modification date, or nil if not known
@@ -224,4 +212,25 @@ module Rack::REST::Resource
   # May return a number of seconds, for use in combination with the default implementation of expiry_time
   def expiry_period
   end
+
+
+
+  # Put to missing subresource
+
+  # Equivalent to supports_put?, but is given child_identifier_components for the proposed subresource
+  def supports_put_to_missing_subresource?(child_identifier_components); false; end
+  # Equivalent to accepts_put_with_media_type?, but is given child_identifier_components for the proposed subresource
+  def accepts_put_to_missing_subresource_with_media_type?(child_identifier_components, media_type); false; end
+
+  # Called to create a new subresource with the identifier given by child_identifier_components ontop of the identifier_components of self.
+  # The new resource created must have the given entity as one of its representations (or a resource-level semantic equivalent).
+  # Entity will be a new entity representation whose media_type has been okayed by accepts_put_to_missing_subresource_with_media_type?
+  #
+  # Subsequent to a successful put_to_missing_subresource, the following should hold:
+  #   * resolve_subresource(child_identifier_components) should return the new subresource
+  #
+  # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
+  def put_to_missing_subresource(child_identifier_components, entity)
+  end
+
 end

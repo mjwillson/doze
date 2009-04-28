@@ -173,6 +173,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     case request_method
     # HTTP methods for which we provide special support at this layer
     when 'GET','HEAD' then get_response
+    when 'POST'       then post_response
     when 'PUT'        then put_response
     when 'DELETE'     then delete_response
     when 'OPTIONS'    then options_response
@@ -181,7 +182,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def options_response(resource_methods=@resource.supported_methods)
-    [STATUS_OK, allow_header(resource_methods), []]
+    Rack::REST::Response.new(STATUS_OK, allow_header(resource_methods))
   end
 
   def get_response(head_only=false)
@@ -196,11 +197,11 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def put_response
-    rep = request_entity
-    check_method_support('put', rep && rep.media_type)
+    entity = request_entity
+    check_method_support('put', entity && entity.media_type)
     check_authorization('put')
     check_resource_preconditions if @resource.exists?
-    @resource.put(rep)
+    @resource.put(entity)
     Rack::REST::Response.new_empty
   end
 
@@ -215,38 +216,58 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def post_response
-    rep = request_entity
-    check_method_support('post', rep && rep.media_type)
+    entity = request_entity
+    check_method_support('post', entity && entity.media_type)
     check_authorization('post')
     check_resource_preconditions
-    result = @resource.post(rep)
+    result = @resource.post(entity)
     # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
     # this is the only respect in which it differs from the general other_method treatment
     make_general_result_response(result, STATUS_CREATED)
   end
 
   def other_response(resource_method)
-    rep = request_entity
-    check_method_support(resource_method, rep && rep.media_type)
+    entity = request_entity
+    check_method_support(resource_method, entity && entity.media_type)
     check_authorization(resource_method)
     check_resource_preconditions
-    result = @resource.other_method(resource_method, rep)
+    result = @resource.other_method(resource_method, entity)
     # 303 See Other is the default interpretation of a new resource with an identifier resulting from a post.
     # TODO: maybe a way to indicate the semantics of the operation that resulted so that other status codes can be returned
     make_general_result_response(result, STATUS_SEE_OTHER)
   end
 
 
+  # Requests for missing subresources.
+  # For now we only support PUT and OPTIONS.
+  # As an alternative, one can of course always resolve a stub subresource with exists? == false
+
   def respond_to_request_on_missing_subresource
     case request_method
-    # HTTP methods for which we provide special support at this layer
-    # Every URI (existent or not) has support for OPTIONS:
-    when 'OPTIONS'  then options_response( @resource.supported_methods_on_missing_subresource(@identifier_components) )
-    when 'HEAD'     then get_response_on_missing_subresource(true)
-    when 'GET'      then get_response_on_missing_subresource
-    when 'PUT'      then put_response_on_missing_subresource
-    when 'DELETE'   then delete_response_on_missing_subresource
-    else other_response_on_missing_subresource(method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
+    when 'PUT'      then put_to_missing_subresource_response
+    when 'OPTIONS'  then options_response(supported_methods_on_missing_subresource)
     end or throw_error_response(STATUS_NOT_FOUND)
+  end
+
+  def supported_methods_on_missing_subresource
+    result = ['OPTIONS']
+    result << 'PUT' if @resource.supports_put_to_missing_subresource?(@identifier_components)
+    result
+  end
+
+  def put_to_missing_subresource_response
+    entity = request_entity
+
+    unless @resource.supports_put_to_missing_subresource?(@identifier_components)
+      throw_error_response(STATUS_METHOD_NOT_ALLOWED, allow_header(supported_methods_on_missing_subresource))
+    end
+
+    if entity && entity.media_type && !@resource.accepts_put_to_missing_subresource_with_media_type?(@identifier_components, entity.media_type)
+      throw_error_response(STATUS_UNSUPPORTED_MEDIA_TYPE)
+    end
+
+    check_authorization('put_to_missing_subresource')
+    @resource.put_to_missing_subresource(@identifier_components, entity)
+    Rack::REST::Response.new_empty(STATUS_CREATED)
   end
 end
