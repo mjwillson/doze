@@ -4,16 +4,16 @@ class Rack::REST::Negotiator
   def initialize(request, supports_media_type_negotiation=true, supports_language_negotiation=true)
     accept_header = request.env['HTTP_ACCEPT']
     @media_type_criterea = if accept_header && supports_media_type_negotiation
-      parse_accept_header(accept_header).sort_by {|matcher,specificity,q| -specificity}
       @negotiation_requested = true
+      parse_accept_header(accept_header).sort_by {|matcher,specificity,q| -specificity}
     else
       [[Object, 0, 1.0]]
     end
 
     accept_language_header = request.env['HTTP_ACCEPT_LANGUAGE']
     @language_criterea = if accept_language_header && supports_language_negotiation
-      parse_accept_header(accept_language_header).sort_by {|matcher,specificity,q| -specificity}
       @negotiation_requested = true
+      parse_accept_header(accept_language_header).sort_by {|matcher,specificity,q| -specificity}
     else
       [[Object, 0, 1.0]]
     end
