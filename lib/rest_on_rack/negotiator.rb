@@ -73,11 +73,11 @@ class Rack::REST::Negotiator
 
     def parse_accept_header(accept_header_value)
       accept_header_value.split(/,\s*/).map do |part|
-        /^([^\s,]+?)(?:;\s*q=(\d+(?:\.\d+)?))?$/.match(part) or throw_response(400) # From WEBrick via Rack
+        /^([^\s,]+?)(?:;\s*q=(\d+(?:\.\d+)?))?$/.match(part) or next # From WEBrick via Rack
         q = ($2 || 1.0).to_f
         matcher, specificity = matcher_from_http_range_string($1)
         [matcher, specificity, q]
-      end
+      end.compact
     end
 
     def max_by_non_zero(array)

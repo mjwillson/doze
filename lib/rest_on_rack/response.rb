@@ -1,7 +1,7 @@
 class Rack::REST::Response
   include Rack::REST::Utils
 
-  def initialize(status=200, headers={}, body='')
+  def initialize(status=STATUS_OK, headers={}, body='')
     @headers = Rack::Utils::HeaderHash.new(headers)
     @status = status
     @body = body
@@ -11,7 +11,7 @@ class Rack::REST::Response
   attr_accessor :body, :status, :head_only
 
   def finish(head_only=@head_only)
-    header["Content-Length"] ||= content_length unless @status == 204 || @status == 304
+    header["Content-Length"] ||= content_length unless @status == STATUS_NO_CONTENT || @status == STATUS_NOT_MODIFIED
     [@status, @headers.to_hash, head_only ? [] : [@body]]
   end
 
@@ -30,24 +30,24 @@ class Rack::REST::Response
     @body = entity.data
   end
 
-  def self.new_from_entity(entity, status=200)
+  def self.new_from_entity(entity, status=STATUS_OK)
     result = new(status)
     result.entity = entity
     result
   end
 
-  def self.new_empty(status=204, headers={})
+  def self.new_empty(status=STATUS_NO_CONTENT, headers={})
     new(status, headers)
   end
 
-  def set_redirect(resource, status=303)
+  def set_redirect(resource, status=STATUS_SEE_OTHER)
     raise 'Resource specified as a representation must have identity in order to redirect to it' unless resource.has_identifier?
     @status = status
     @headers['Location'] = identifier_components_to_uri(@request, resource.identifier_components)
     @body = ''
   end
 
-  def self.new_redirect(resource, status=303)
+  def self.new_redirect(resource, status=STATUS_SEE_OTHER)
     result = new
     result.set_redirect(resource, status)
     result

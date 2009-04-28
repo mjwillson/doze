@@ -42,9 +42,8 @@ class Rack::REST::ResourceResponder < Rack::Request
     if @identifier_components.empty?
       respond_to_direct_request
     else
-      subresource, remaining_identifier_components = @resource.authorize(:resolve_subresource) do
-        @resource.resolve_subresource(@identifier_components, request_method.downcase)
-      end
+      check_authorization('resolve_subresource')
+      subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components, request_method.downcase)
 
       if subresource
         Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components).respond
@@ -57,9 +56,9 @@ class Rack::REST::ResourceResponder < Rack::Request
   # some general request and response helpers
 
   def check_method_support(resource_method, media_type=nil)
-    throw_error_response(501) unless @resource.recognizes_method?(resource_method)
-    throw_error_response(405, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
-    throw_error_response(415) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
+    throw_error_response(STATUS_NOT_IMPLEMENTED) unless @resource.recognizes_method?(resource_method)
+    throw_error_response(STATUS_METHOD_NOT_ALLOWED, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
+    throw_error_response(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
   end
 
   def allow_header(resource_methods)
@@ -82,7 +81,15 @@ class Rack::REST::ResourceResponder < Rack::Request
     @request_entity ||= Rack::REST::Entity.new(@request.body, :media_type => @request.media_type, :encoding => @request.content_charset) unless @request.body.empty?
   end
 
-  def check_resource_preconditions(failure_status=412)
+  def check_authorization(action)
+    if @resource.require_authentication? && !@request.authenticated_user
+      throw_error_response(STATUS_UNAUTHORIZED) # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
+    elsif !@resource.authorize(action, @request.authenticated_user)
+      throw_error_response(STATUS_FORBIDDEN) # this one, 403, really means 'unauthorized'
+    end
+  end
+
+  def check_resource_preconditions(failure_status=STATUS_PRECONDITION_FAILED)
     last_modified = @resource.last_modified or return
     if_modified_since   = @request.env['HTTP_IF_MODIFIED_SINCE']
     if_unmodified_since = @request.env['HTTP_IF_UNMODIFIED_SINCE']
@@ -92,7 +99,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def check_entity_preconditions(entity=nil, failure_status=412)
+  def check_entity_preconditions(entity=nil, failure_status=STATUS_PRECONDITION_FAILED)
     if_match      = @request.env['HTTP_IF_MATCH']
     if_none_match = @request.env['HTTP_IF_NONE_MATCH']
     return unless if_match || if_none_match
@@ -109,7 +116,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def get_preferred_representation(resource, add_to_response=nil, status_if_missing=500)
+  def get_preferred_representation(resource, add_to_response=nil, status_if_missing=STATUS_INTERNAL_SERVER_ERROR)
     s_mtype, s_lang = resource.supports_media_type_negotiation?, resource.supports_language_negotiation?
     negotiator = if (s_mtype || s_lang)
       # The resource supports some kind of content negotiation
@@ -120,13 +127,13 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
 
     resource.get(negotiator) or if negotiator && negotiator.negotiation_requested?
-      throw_error_response(406)
+      throw_error_response(STATUS_NOT_ACCEPTABLE)
     else
       throw_error_response(status_if_missing)
     end
   end
 
-  def make_representation_of_resource_response(resource, representation=nil, check_precond=false, status_if_missing=500)
+  def make_representation_of_resource_response(resource, representation=nil, check_precond=false, status_if_missing=STATUS_INTERNAL_SERVER_ERROR)
     response = Rack::REST::Response.new
 
     representation ||= get_preferred_representation(resource, response, status_if_missing)
@@ -147,7 +154,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     response
   end
 
-  def make_general_result_response(result, status_for_resource_redirect_result=303)
+  def make_general_result_response(result, status_for_resource_redirect_result=STATUS_SEE_OTHER)
     case result
     when Rack::REST::Resource
       if result.has_identifier?
@@ -174,15 +181,16 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def options_response(resource_methods=@resource.supported_methods)
-    [200, allow_header(resource_methods), []]
+    [STATUS_OK, allow_header(resource_methods), []]
   end
 
   def get_response(head_only=false)
-    throw_error_response(404) unless @resource.exists?
+    throw_error_response(STATUS_NOT_FOUND) unless @resource.exists?
     check_method_support('get')
-    check_resource_preconditions(304)
+    check_authorization('get')
+    check_resource_preconditions(STATUS_NOT_MODIFIED)
 
-    response = make_representation_of_resource_response(@resource, representation, true, 404)
+    response = make_representation_of_resource_response(@resource, representation, true, STATUS_NOT_FOUND)
     response.head_only = true if request_method == 'HEAD'
     response
   end
@@ -190,6 +198,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   def put_response
     rep = request_entity
     check_method_support('put', rep && rep.media_type)
+    check_authorization('put')
     check_resource_preconditions if @resource.exists?
     @resource.put(rep)
     Rack::REST::Response.new_empty
@@ -197,6 +206,7 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   def delete_response
     check_method_support('delete')
+    check_authorization('delete')
     if @resource.exists?
       check_resource_preconditions
       @resource.delete
@@ -207,21 +217,23 @@ class Rack::REST::ResourceResponder < Rack::Request
   def post_response
     rep = request_entity
     check_method_support('post', rep && rep.media_type)
+    check_authorization('post')
     check_resource_preconditions
     result = @resource.post(rep)
     # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
     # this is the only respect in which it differs from the general other_method treatment
-    make_general_result_response(result, 201)
+    make_general_result_response(result, STATUS_CREATED)
   end
 
   def other_response(resource_method)
     rep = request_entity
     check_method_support(resource_method, rep && rep.media_type)
+    check_authorization(resource_method)
     check_resource_preconditions
     result = @resource.other_method(resource_method, rep)
     # 303 See Other is the default interpretation of a new resource with an identifier resulting from a post.
     # TODO: maybe a way to indicate the semantics of the operation that resulted so that other status codes can be returned
-    make_general_result_response(result, 303)
+    make_general_result_response(result, STATUS_SEE_OTHER)
   end
 
 
@@ -235,14 +247,6 @@ class Rack::REST::ResourceResponder < Rack::Request
     when 'PUT'      then put_response_on_missing_subresource
     when 'DELETE'   then delete_response_on_missing_subresource
     else other_response_on_missing_subresource(method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
-    end or throw_error_response(404)
-  end
-
-  def authorize(action)
-    if @resource.require_authentication? && !@request.authenticated_user
-      throw_error_response(401)
-    elsif !@resource.authorize(action, @request.authenticated_user)
-      throw_error_response(403)
-    end
+    end or throw_error_response(STATUS_NOT_FOUND)
   end
 end

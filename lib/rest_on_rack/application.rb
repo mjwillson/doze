@@ -19,12 +19,12 @@ class Rack::REST::Application
       response.finish
     rescue
       begin
-        error_resource  = Rack::REST::Resource::Error.new(500)
+        error_resource  = Rack::REST::Resource::Error.new(Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR)
         error_responder = Rack::REST::ResourceResponder.new(error_resource, request)
         response = error_responder.respond
         response.finish(@request.method == 'HEAD')
       rescue
-        [500, {}, ['500 response via error resource failed']]
+        [Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
       end
     end
   end

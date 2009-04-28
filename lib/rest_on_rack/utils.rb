@@ -1,4 +1,4 @@
-# These are various utility functions which aid the conversion back and forth between HTTP syntax and the more abstracted ruby representations we use.
+# Various stateless utility functions which aid the conversion back and forth between HTTP syntax and the more abstracted ruby representations we use.
 module Rack::REST::Utils
   Rack::Utils::HTTP_STATUS_CODES.each do |code,text|
     const_set('STATUS_' << text.upcase.gsub(/[^A-Z]+/, '_'), code)
@@ -26,4 +26,7 @@ module Rack::REST::Utils
   def quote(str)
     '"' << str.gsub(/[\\\"]/o, "\\\1") << '"'
   end
+
+  # So utility functions are accessible as Rack::REST::Utils.foo as well as via including the module
+  extend self
 end
