@@ -209,9 +209,19 @@ module Rack::REST::Resource
   def accepts_put_with_media_type?(media_type); false; end
   def accepts_post_with_media_type?(media_type); false; end
 
-  # Modification date
+  # Caching and modification-related metadata
 
   # May return a Time object inidicating the last modification date, or nil if not known
   def last_modified
+  end
+
+  # May return a Time object inidicating when the resource expires, or nil if not known.
+  # Default implementation uses expiry_period
+  def expiry_time
+    period = expiry_period && Time.now + period
+  end
+
+  # May return a number of seconds, for use in combination with the default implementation of expiry_time
+  def expiry_period
   end
 end

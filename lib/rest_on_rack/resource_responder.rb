@@ -109,9 +109,15 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def get_preferred_representation(resource, status_if_missing=500)
+  def get_preferred_representation(resource, add_to_response=nil, status_if_missing=500)
     s_mtype, s_lang = resource.supports_media_type_negotiation?, resource.supports_language_negotiation?
-    negotiator = (s_mtype || s_lang) && Rack::REST::Negotiator.new(@request, s_mtype, s_lang)
+    negotiator = if (s_mtype || s_lang)
+      # The resource supports some kind of content negotiation
+      # Add relevant headers to a response if passed:
+      add_to_response.headers['Vary'] = [s_mtype && 'Accept', s_lang && 'Accept-Language'].compact.join(', ') if add_to_response
+      # Instantiate a negotiator to pass to the resource's get method
+      Rack::REST::Negotiator.new(@request, s_mtype, s_lang)
+    end
 
     resource.get(negotiator) or if negotiator && negotiator.negotiation_requested?
       throw_error_response(406)
@@ -120,10 +126,17 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def make_representation_of_resource_response(resource, representation)
+  def make_representation_of_resource_response(resource, representation=nil, check_precond=false, status_if_missing=500)
     response = Rack::REST::Response.new
-    last_modified = resource && resource.last_modified
-    response.headers['Last-Modified'] = last_modified.httpdate if last_modified
+
+    representation ||= get_preferred_representation(resource, response, status_if_missing)
+
+    # preconditions on the representation only apply to the content that would be served up by a GET
+    check_representation_preconditions(representation) if check_precond
+
+    # resource-level caching metadata headers
+    last_modified = resource.last_modified and response.headers['Last-Modified'] = last_modified.httpdate
+    expiry_time   = resource.expiry_time   and response.headers['Expires']       = expiry_time.httpdate
 
     case representation
     when Rack::REST::Entity
@@ -140,8 +153,7 @@ class Rack::REST::ResourceResponder < Rack::Request
       if result.has_identifier?
         Rack::REST::Response.new_redirect(result, status_for_resource_redirect_result)
       else
-        representation = get_preferred_representation(result)
-        make_representation_of_resource_response(result, representation, false)
+        make_representation_of_resource_response(result)
       end
     when Rack::REST::Entity
       Rack::REST::Response.new_from_entity(result)
@@ -170,10 +182,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     check_method_support('get')
     check_resource_preconditions(304)
 
-    representation = get_preferred_representation(@resource, 404)
-    check_representation_preconditions(representation)
-
-    response = make_representation_of_resource_response(@resource, representation)
+    response = make_representation_of_resource_response(@resource, representation, true, 404)
     response.head_only = true if request_method == 'HEAD'
     response
   end
