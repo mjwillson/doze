@@ -92,7 +92,7 @@ module Rack::REST::Resource
   # Should return a Rack::REST::Entity, or nil if no suitable entity representation is available.
   # If supports_language_negotiation? or supports_media_type_negotiation? are true, you will be passed a Rack::REST::Negotiator (see the docs on this class);
   # if you return nil it will then be intepreted as a failure to negotiate a suitable entity representation
-  def entity_representation(negotiator=nil)
+  def entity_representation(negotiator=nil, range=nil)
   end
 
   # You have the opportunity to return another resource which may taken as a representation of this one. This will take preference over
@@ -113,8 +113,9 @@ module Rack::REST::Resource
   # failing that it'll call entity_representation to get an appropriate Rack::REST::Entity.
   #
   # negotiator: may be an instance of Rack::REST::Negotiator; see entity_representation
-  def get(negotiator=nil)
-    resource_representation || (negotiator ? entity_representation : entity_representation(negotiator))
+  # range:      may be an instance of Rack::REST::Range; see supported_range_units
+  def get(negotiator=nil, range=nil)
+    resource_representation || entity_representation(negotiator, range)
   end
 
   # Called to update the entirity of the this resource to the resource represented by the given representation entity.
@@ -236,4 +237,20 @@ module Rack::REST::Resource
   def put_to_missing_subresource(child_identifier_components, entity)
   end
 
+
+  # Range requests
+  
+  # May return a list of supported unit types, eg 'bytes', 'items', 'pages'.
+  # If there are supported_range_units, then calls to get may be passed an instance of Rack::REST::Range.
+  # get must then return the whole collection (if range not given) or just the range specified (if given)
+  # or nil (if the range specified turns out to be unsatisfiable)
+  #(except then how do we distinguish negotiation failed from range unsatisfiable. arse.)
+  def supported_range_units; end
+
+  # Given a supported unit type, must return an integer for how many of that unit exist in this resource.
+  # May return nil if the length is not known upfront or you don't wish to calculate it upfront.
+  def range_length(units); end
+  
+  # If this returns an integer, range requests with length greater than specified will be rejected before bothering you further.
+  def max_requestable_range_length(units); end
 end
