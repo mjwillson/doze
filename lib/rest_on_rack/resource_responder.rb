@@ -116,17 +116,52 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
+  def handle_range_request(resource, add_to_response, negotiator=nil)
+    supported_range_units = resource.supported_range_units
+    return if !supported_range_units || supported_range_units.empty?
+
+    add_to_response.headers['Accept-Ranges'] = supported_range_units.join(', ')
+    add_to_response.add_header_values('Vary', 'Range')
+
+    range = Rack::REST::Range.from_request(@request) or return
+
+    if !supported_range_units.include?(range.units) || range.length <= 0 || !resource.range_acceptable?(range, negotiator)
+      throw_error_response(STATUS_BAD_REQUEST)
+    end
+
+    total_length = resource.range_length(range.units, negotiator)
+    if total_length
+      # We know the total length upfront; crop the requested range's end to within the total_length:
+      range = range.with_max_end(total_length)
+    else
+      # We don't know the total length upfront; ask the resource to 'suck it and see' how much of the range is satisfiable:
+      sat_length = resource.length_of_range_satisfiable(range, negotiator) || 0
+      range = range.with_max_length(sat_length)
+    end
+
+    if range.length <= 0
+      throw_error_response(STATUS_REQUESTED_RANGE_NOT_SATISFIABLE, 'Content-Range' => "#{range.units} */#{total_length || '*'}")
+    else
+      add_to_response.status = STATUS_PARTIAL_CONTENT
+      add_to_response.headers['Content-Range'] = "#{range.units} #{range.begin}-#{range.end-1}/#{total_length || '*'}"
+      range
+    end
+  end
+
   def get_preferred_representation(resource, add_to_response=nil, status_if_missing=STATUS_INTERNAL_SERVER_ERROR)
     s_mtype, s_lang = resource.supports_media_type_negotiation?, resource.supports_language_negotiation?
     negotiator = if (s_mtype || s_lang)
       # The resource supports some kind of content negotiation
       # Add relevant headers to a response if passed:
-      add_to_response.headers['Vary'] = [s_mtype && 'Accept', s_lang && 'Accept-Language'].compact.join(', ') if add_to_response
+      add_to_response.add_header_values('Vary', s_mtype && 'Accept', s_lang && 'Accept-Language') if add_to_response
       # Instantiate a negotiator to pass to the resource's get method
       Rack::REST::Negotiator.new(@request, s_mtype, s_lang)
     end
 
-    resource.get(negotiator) or if negotiator && negotiator.negotiation_requested?
+    # We only handle range requests when a direct GET to this resource is being made
+    range = (handle_range_request(resource, add_to_response, negotiator) if request_method == 'GET')
+
+    resource.get(negotiator, range) or if negotiator && negotiator.negotiation_requested?
       throw_error_response(STATUS_NOT_ACCEPTABLE)
     else
       throw_error_response(status_if_missing)

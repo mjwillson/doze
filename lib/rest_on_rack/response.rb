@@ -53,4 +53,9 @@ class Rack::REST::Response
     result.set_redirect(resource, status)
     result
   end
+
+  def add_header_values(header, *values)
+    values.unshift(@headers[header])
+    @headers[header] = values.compact.join(', ')
+  end
 end

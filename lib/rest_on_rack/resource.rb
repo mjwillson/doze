@@ -239,7 +239,7 @@ module Rack::REST::Resource
 
 
   # Range requests
-  
+
   # May return a list of supported unit types, eg 'bytes', 'items', 'pages'.
   # If there are supported_range_units, then calls to get may be passed an instance of Rack::REST::Range.
   # get must then return the whole collection (if range not given) or just the range specified (if given)
@@ -247,10 +247,20 @@ module Rack::REST::Resource
   #(except then how do we distinguish negotiation failed from range unsatisfiable. arse.)
   def supported_range_units; end
 
-  # Given a supported unit type, must return an integer for how many of that unit exist in this resource.
-  # May return nil if the length is not known upfront or you don't wish to calculate it upfront.
-  def range_length(units); end
-  
-  # If this returns an integer, range requests with length greater than specified will be rejected before bothering you further.
-  def max_requestable_range_length(units); end
+  # Since some of these may depend on the particular representation entity negotiated, a negotiator may be passed to them as to get.
+
+  # Given a supported unit type, should return an integer for how many of that unit exist in this resource.
+  # May return nil if the length is not known upfront or you don't wish to calculate it upfront; in this case
+  # length_of_range_satisfiable will be called to establish how much of the range is able to be satisfied.
+  def range_length(units, negotiator=nil); end
+
+  # Only called if range_length is not known. Given a Rack::REST::Range, return the length of that range
+  # which you will be able to satisfy. Something between 0 and range.length. You could use this eg to 'suck it and see'
+  # via an sql query with an offset and limit, without asking for the total count.
+  def length_of_range_satisfiable(range, negotiator=nil); end
+
+  # Passed a Rack::REST::Range, your chance to reject it outright for perfomance or other arbitrary reasons (like, eg, too long, too big an offset).
+  # Note that you don't need to check whether it's within the total length of your collection; you should define range_length
+  # so that this check can be performed separately.
+  def range_acceptable?(range, negotiator=nil); true; end
 end
