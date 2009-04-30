@@ -20,7 +20,6 @@ class Rack::REST::Negotiator
   end
 
   # Will return false if the request which it's negotiating on behalf of, didn't actually ask for any negotiation (ie no Accepts headers).
-  # You can use this as a shortcut to ignore the negotiator; it may also be used to determine the reason for any failure to return a response (406 vs 404 or 500)
   def negotiation_requested?; @negotiation_requested; end
 
   def media_type_quality(media_type)

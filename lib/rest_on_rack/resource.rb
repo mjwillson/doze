@@ -86,37 +86,50 @@ module Rack::REST::Resource
     STANDARD_RESTFUL_METHODS.filter {|method| supports_method?(method)}
   end
 
+  # Content negotiation and getting resource representation(s)
+
   def supports_media_type_negotiation?; false; end
   def supports_language_negotiation?;   false; end
 
-  # Should return a Rack::REST::Entity, or nil if no suitable entity representation is available.
-  # If supports_language_negotiation? or supports_media_type_negotiation? are true, you will be passed a Rack::REST::Negotiator (see the docs on this class);
-  # if you return nil it will then be intepreted as a failure to negotiate a suitable entity representation
-  def entity_representation(negotiator=nil, range=nil)
+  # GET methods
+  #
+  # To support get, you must override one of get_resource_representation, get_entity_representations or get_entity_representation.
+  #
+  # get_resource_representation will be called first to get a representation resource to redirect to; if it returns nil,
+  # get_entity_representation(s) will be called.
+  #
+  # All get methods should be safe, that is, not have any side-effects visible to the caller. This also implies idempotency (which is weaker).
+  # If you wish to indicate that the resource is missing, return false from exists?
+  #
+  # get_entity_representations:
+  # Called when content negotiation (media_type or language) is supported and has been requested.
+  # Should return an array of Rack::REST::Entity, each consisting of an available representation entity.
+  # The appropriate one will be chosen and used.
+  #
+  # If you return multiple entities, we recommend you use 'lazy' Rack::REST::Entity instances constructed
+  # with a block, to avoid the cost of generating each available response entity upfront.
+  #
+  # By default this will return an array of just the one representation returned from get_entity_representation.
+  def get_entity_representations
+    [get_entity_representation].compact
   end
 
-  # You have the opportunity to return another resource which may taken as a representation of this one. This will take preference over
-  # an entity_representation response (although you can override get)
+  # get_entity_representation: called to get a single entity representation of the resource. It may be used when content
+  # negotiation is not supported or requested.
+  #
+  # To support get, you must override one of get_entity_representations or get_entity_representation.
+  # By default this will pick the first entity from get_entity_representations.
+  def get_entity_representation
+    get_entity_representations.first
+  end
+
+  # You have the opportunity to return another resource which may taken as a representation of this one. This will be used in preference over
+  # entity_representation to respond to a get.
   #
   # A returned resource must have an identifier; in the case of HTTP this would lead to a redirect to that resource.
-  def resource_representation
+  def get_resource_representation
   end
 
-  # Should be idempotent, and safe ie not have any side-effects visible to the caller.
-  #
-  # May return:
-  #   * A Rack::REST::Entity as a representation entity of this resource
-  #   * Another Rack::REST::Resource as a representation resource of this resource (would correspond to a redirect in HTTP)
-  #   * nil, indicating that the resource is missing (although exists? is preferred if you wish to indicate this as it works with methods other than get)
-  #
-  # The default implementation will call resource_representation to get another resource which may taken as a representation of this one
-  # failing that it'll call entity_representation to get an appropriate Rack::REST::Entity.
-  #
-  # negotiator: may be an instance of Rack::REST::Negotiator; see entity_representation
-  # range:      may be an instance of Rack::REST::Range; see supported_range_units
-  def get(negotiator=nil, range=nil)
-    resource_representation || entity_representation(negotiator, range)
-  end
 
   # Called to update the entirity of the this resource to the resource represented by the given representation entity.
   # entity will be a new entity representation whose media_type has been okayed by accepts_put_with_media_type?
@@ -238,14 +251,28 @@ module Rack::REST::Resource
   end
 
 
-  # Range requests
+  # Resource-level Range requests
 
-  # May return a list of supported unit types, eg 'bytes', 'items', 'pages'.
+  # May return a list of supported resource-level unit types, eg 'items', 'pages'.
+  #
+  # Note that this interface is not intended to be used when the range depends on the particular representation entity selected
+  # (eg for byte-ranges). TODO: add a representation-entity-specific range API which is called after content negotiation.
+  #
   # If there are supported_range_units, then calls to get may be passed an instance of Rack::REST::Range.
   # get must then return the whole collection (if range not given) or just the range specified (if given)
-  # or nil (if the range specified turns out to be unsatisfiable)
-  #(except then how do we distinguish negotiation failed from range unsatisfiable. arse.)
+  # or nil (if the range specified turns out to be unsatisfiable).
   def supported_range_units; end
+
+  # Where range units are supported and a range request is made, one of these will be called instead of get_entity_representation(s).
+  # See get_entity_representations
+  def get_entity_representations_with_range(range)
+    [get_entity_representation_with_range(range)].compact
+  end
+
+  # See get_entity_representations
+  def get_entity_representation_with_range(range)
+    get_entity_representations_with_range(range).first
+  end
 
   # Since some of these may depend on the particular representation entity negotiated, a negotiator may be passed to them as to get.
 

@@ -1,10 +1,9 @@
-class Rack::REST::Resource::SingleRepresentation
-  include Rack::REST::Resource
+module Rack::REST::Resource::SingleRepresentation
+  def media_type; 'text/html'; end
+  def language; end
+  def data; ''; end
 
-  def initialize(representation, *resource_args)
-    @representation = representation
-    initialize_resource(*resource_args)
+  def get_representation_entity
+    Rack::REST::Entity.new(:media_type => media_type, :language => language) {data}
   end
-
-  def get(negotiator=nil); @representation; end
 end
