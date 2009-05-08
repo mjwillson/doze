@@ -34,6 +34,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     response = error_responder.get_response
     response.head_only = true if request_method == 'HEAD'
     response.status = status
+    response.headers.merge!(headers)
     response
   end
 

@@ -2,6 +2,7 @@ require 'rest_on_rack'
 require 'test/unit'
 require 'rack/test'
 require 'mocha'
+require 'rest_on_rack/resource/single_representation'
 
 module Rack::REST::TestCase
   include Rack::Test::Methods
@@ -11,18 +12,32 @@ module Rack::REST::TestCase
   end
 
   def root_resource
-    @root_resource ||= stub_resource
+    @root_resource ||= Object.new.extend(Rack::REST::Resource).extend(Rack::REST::Resource::SingleRepresentation)
   end
 
-  def stub_resource(*p, &b)
-    stub(*p, &b).extend(Rack::REST::Resource)
+  def get(*p, &b)
+    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
   end
 
-  def mock_resource(*p)
-    mock(*p, &b).extend(Rack::REST::Resource)
+  def put(*p, &b)
+    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
   end
 
-  def other_request_method(method, uri, params={}, env={}, &block)
-    request(uri, env.merge(:method => method, :params => params), &block)
+  def post(*p, &b)
+    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  end
+
+  def delete(*p, &b)
+    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  end
+
+  def head(*p, &b)
+    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  end
+
+  def other_request_method(method, *p, &block)
+    p.unshift('/') unless p.first.is_a?(String)
+    uri, params, env = *p
+    request(uri, (env || {}).merge(:method => method, :params => params || {}), &block)
   end
 end
