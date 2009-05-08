@@ -3,28 +3,34 @@ require 'rest_on_rack/resource_responder'
 class Rack::REST::Application
   include Rack::REST::Utils
 
-  def initialize(resource)
+  def initialize(resource, catch_exceptions=true)
     @root_resource = resource
+    # Setting this to false is useful for testing, so an exception can make a test fail via
+    # the normal channels rather than having to check and parse it out of a response.
+    @catch_exceptions = catch_exceptions
   end
 
   def call(env)
     request = Rack::Request.new(env)
     configure_script_name(request)
 
-    additional_identifier_components = path_to_identifier_components(request.path_info)
+    identifier_components = path_to_identifier_components(request.path_info)
 
     responder = Rack::REST::ResourceResponder.new(@root_resource, request, identifier_components)
     begin
       response = catch(:response) { responder.respond }
       response.finish
-    rescue
+    rescue => e
+      raise unless @catch_exceptions
+      env['rack.error'].write("#{e}:\n\n#{e.backtrace.join("\n")}")
       begin
-        error_resource  = Rack::REST::Resource::Error.new(Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR)
+        error_resource  = Rack::REST::Resource::Error.new(STATUS_INTERNAL_SERVER_ERROR)
         error_responder = Rack::REST::ResourceResponder.new(error_resource, request)
-        response = error_responder.respond
+        response = error_responder.get_response
+        response.status = STATUS_INTERNAL_SERVER_ERROR
         response.finish(@request.method == 'HEAD')
       rescue
-        [Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
+        [STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
       end
     end
   end

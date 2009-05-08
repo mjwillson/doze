@@ -72,10 +72,12 @@ module Rack::REST::Resource
     STANDARD_RESTFUL_METHODS.include?(method)
   end
 
-  def supports_method?(method)
-    supports = :"supports_#{method}"
-    respond_to?(supports) && send(supports)
+  # A convenience which some libraries add to Kernel
+  def try(method, *args, &block)
+    send(method, *args, &block) if respond_to?(method)
   end
+
+  def supports_method?(method); try("supports_#{method}?"); end
 
   def supports_get?;    true;  end
   def supports_put?;    false; end
@@ -83,7 +85,7 @@ module Rack::REST::Resource
   def supports_delete?; false; end
 
   def supported_methods
-    STANDARD_RESTFUL_METHODS.filter {|method| supports_method?(method)}
+    STANDARD_RESTFUL_METHODS.select {|method| supports_method?(method)}
   end
 
   # Content negotiation and getting resource representation(s)
@@ -202,8 +204,7 @@ module Rack::REST::Resource
   end
 
   def accepts_method_with_media_type?(resource_method, media_type)
-    method = :"accepts_#{resource_method}_with_media_type"
-    respond_to?(method) && send(method, media_type)
+    try("accepts_#{resource_method}_with_media_type?", media_type)
   end
 
   def accepts_put_with_media_type?(media_type); false; end

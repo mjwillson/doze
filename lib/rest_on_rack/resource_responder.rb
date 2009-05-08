@@ -13,7 +13,7 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   attr_reader :root_resource, :request
 
-  def initialize(resource, request, identifier_components)
+  def initialize(resource, request, identifier_components=[])
     @resource = resource
     @request = request
     @identifier_components = identifier_components
@@ -31,8 +31,9 @@ class Rack::REST::ResourceResponder < Rack::Request
   def error_response(status, headers={})
     error_resource = Rack::REST::Resource::Error.new(status)
     error_responder = Rack::REST::ResourceResponder.new(error_resource, @request)
-    response = error_responder.respond
+    response = error_responder.get_response
     response.head_only = true if request_method == 'HEAD'
+    response.status = status
     response
   end
 
@@ -72,19 +73,31 @@ class Rack::REST::ResourceResponder < Rack::Request
   # We allow other request methods to be tunnelled over POST via a couple of mechanisms:
   def request_method
     @request_method ||= begin
-      method = @request.method
+      method = @request.request_method
       (@request.env['HTTP_X_HTTP_METHOD_OVERRIDE'] || @request.GET('_method') if method == 'POST') || method
     end
   end
 
   def request_entity
-    @request_entity ||= Rack::REST::Entity.new(@request.body, :media_type => @request.media_type, :encoding => @request.content_charset) unless @request.body.empty?
+    body = @request.body
+    body = body.string if body.is_a?(StringIO)
+    @request_entity ||= Rack::REST::Entity.new(body, :media_type => @request.media_type, :encoding => @request.content_charset) unless body.empty?
+  end
+
+  # To do authentication you need some (rack) middleware that sets one of these env's.
+  def authenticated_user
+    @authenticated_user ||= begin
+      env = @request.env
+      env['rest.authenticated_user'] || # Our own convention
+      env['REMOTE_USER'] ||             # Rack::Auth::Basic / Digest, and direct via Apache and some other front-ends that do http auth
+      env['rack.auth.openid']           # Rack::Auth::OpenID
+    end
   end
 
   def check_authorization(action)
-    if @resource.require_authentication? && !@request.authenticated_user
+    if @resource.require_authentication? && !authenticated_user
       throw_error_response(STATUS_UNAUTHORIZED) # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
-    elsif !@resource.authorize(action, @request.authenticated_user)
+    elsif !@resource.authorize(action, authenticated_user)
       throw_error_response(STATUS_FORBIDDEN) # this one, 403, really means 'unauthorized'
     end
   end
@@ -236,7 +249,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     when 'PUT'        then put_response
     when 'DELETE'     then delete_response
     when 'OPTIONS'    then options_response
-    else other_response(method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
+    else other_response(request_method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
     end
   end
 

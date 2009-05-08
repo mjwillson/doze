@@ -6,7 +6,7 @@ class Rack::REST::Resource::Error
   include Rack::REST::Resource
   include Rack::REST::Resource::Serializable
 
-  def initialize(status=STATUS_INTERNAL_SERVER_ERROR, message=Rack::Utils::HTTP_STATUS_CODES[status])
+  def initialize(status=Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, message=Rack::Utils::HTTP_STATUS_CODES[status])
     @status = status
     @message = message
   end

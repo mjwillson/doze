@@ -11,8 +11,8 @@ class Rack::REST::Response
   attr_accessor :body, :status, :head_only
 
   def finish(head_only=@head_only)
-    header["Content-Length"] ||= content_length unless @status == STATUS_NO_CONTENT || @status == STATUS_NOT_MODIFIED
-    header['Date'] = Time.now.httpdate
+    @headers["Content-Length"] ||= content_length.to_s unless @status == STATUS_NO_CONTENT || @status == STATUS_NOT_MODIFIED
+    @headers['Date'] = Time.now.httpdate
     [@status, @headers.to_hash, head_only ? [] : [@body]]
   end
 
