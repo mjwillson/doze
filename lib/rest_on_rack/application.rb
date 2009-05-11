@@ -40,8 +40,8 @@ class Rack::REST::Application
   # the request script_name (which should be fixed for all calls to the same application instance)
   def configure_script_name(request)
     return if @script_name
-    @script_name = request.script_name
+    @script_name = request.script_name || '/'
     root_resource_identifier_components = path_to_identifier_components(@script_name)
-    @root_resource.send(:initialize_resource, nil, *root_resource_identifier_components)
+    @root_resource.send(:initialize_resource, nil, root_resource_identifier_components)
   end
 end

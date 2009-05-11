@@ -7,6 +7,8 @@ require 'rest_on_rack/resource/single_representation'
 class Rack::REST::MockResource
   include Rack::REST::Resource
   include Rack::REST::Resource::SingleRepresentation
+
+  alias :initialize :initialize_resource
 end
 
 class Rack::Test::Session
@@ -26,7 +28,7 @@ module Rack::REST::TestCase
   attr_writer :root_resource
 
   def root_resource
-    @root_resource ||= Rack::REST::MockResource.new
+    @root_resource ||= Rack::REST::MockResource.new(nil, [])
   end
 
   def get(*p, &b)
