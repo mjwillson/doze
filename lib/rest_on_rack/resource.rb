@@ -44,7 +44,7 @@ module Rack::REST::Resource
   # identifier_components given here may be strings; you can if you want convert them to appropriate ruby objects (eg an integer) provided the result
   # of to_s on the resulting object is the same as the original string.
   # if foo.resolve_subresource(bar) returns a resource, that resource must have foo as its parent, bar as its additional_identifier_components.
-  def resolve_subresource(identifier_components, for_method='get')
+  def resolve_subresource(identifier_components)
     first_component, *others = *identifier_components
     resource = self.subresource(first_component) and [resource, others]
   end
@@ -68,6 +68,9 @@ module Rack::REST::Resource
 
   STANDARD_RESTFUL_METHODS = ['get', 'post', 'put', 'delete']
   # for every method here there should be a supports_foo?
+
+  # Recognizing a method just means, 'we know what you mean here'. Whether this resource supports_method? it is another question.
+  # (this is to distinguish 'method not implemented' from 'method not allowed')
   def recognizes_method?(method)
     STANDARD_RESTFUL_METHODS.include?(method)
   end

@@ -4,6 +4,18 @@ require 'rack/test'
 require 'mocha'
 require 'rest_on_rack/resource/single_representation'
 
+class Rack::REST::MockResource
+  include Rack::REST::Resource
+  include Rack::REST::Resource::SingleRepresentation
+end
+
+class Rack::Test::Session
+  # silence warning here (did they mean to use ||= ?)
+  def cookie_jar
+    defined?(@cookie_jar) && @cookie_jar || Rack::Test::CookieJar.new
+  end
+end
+
 module Rack::REST::TestCase
   include Rack::Test::Methods
 
@@ -11,8 +23,10 @@ module Rack::REST::TestCase
     @app ||= Rack::REST::Application.new(root_resource, catch_exceptions)
   end
 
+  attr_writer :root_resource
+
   def root_resource
-    @root_resource ||= Object.new.extend(Rack::REST::Resource).extend(Rack::REST::Resource::SingleRepresentation)
+    @root_resource ||= Rack::REST::MockResource.new
   end
 
   def get(*p, &b)

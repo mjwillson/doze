@@ -5,6 +5,7 @@ class Rack::REST::Response
     @headers = Rack::Utils::HeaderHash.new(headers)
     @status = status
     @body = body
+    @head_only = false
   end
 
   attr_reader :headers

@@ -45,10 +45,10 @@ class Rack::REST::ResourceResponder < Rack::Request
       respond_to_direct_request
     else
       check_authorization('resolve_subresource')
-      subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components, request_method.downcase)
+      subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components)
 
       if subresource
-        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components).respond
+        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components || []).respond
       else
         respond_to_request_on_missing_subresource
       end
@@ -336,9 +336,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def supported_methods_on_missing_subresource
-    result = ['OPTIONS']
-    result << 'PUT' if @resource.supports_put_to_missing_subresource?(@identifier_components)
-    result
+    @resource.supports_put_to_missing_subresource?(@identifier_components) ? ['put'] : []
   end
 
   def put_to_missing_subresource_response

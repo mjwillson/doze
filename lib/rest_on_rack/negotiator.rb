@@ -7,6 +7,7 @@ class Rack::REST::Negotiator
       @negotiation_requested = true
       parse_accept_header(accept_header).sort_by {|matcher,specificity,q| -specificity}
     else
+      @negotiation_requested = false
       [[Object, 0, 1.0]]
     end
 
@@ -15,6 +16,7 @@ class Rack::REST::Negotiator
       @negotiation_requested = true
       parse_accept_header(accept_language_header).sort_by {|matcher,specificity,q| -specificity}
     else
+      @negotiation_requested = false
       [[Object, 0, 1.0]]
     end
   end

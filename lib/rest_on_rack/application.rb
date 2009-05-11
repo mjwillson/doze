@@ -8,6 +8,7 @@ class Rack::REST::Application
     # Setting this to false is useful for testing, so an exception can make a test fail via
     # the normal channels rather than having to check and parse it out of a response.
     @catch_exceptions = catch_exceptions
+    @script_name = nil
   end
 
   def call(env)
