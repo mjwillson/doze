@@ -21,8 +21,8 @@ class IdentifierTest < Test::Unit::TestCase
   end
 
   def test_parent_child_identifier_components
-    sub = Rack::REST::MockResource.new(root_resource, ['foo'])
-    subsub = Rack::REST::MockResource.new(sub, ['bar'])
+    sub = mock_resource(root_resource, ['foo'])
+    subsub = mock_resource(sub, ['bar'])
     assert_equal root_resource, sub.parent
     assert_equal sub, subsub.parent
     assert_equal ['foo'], sub.identifier_components

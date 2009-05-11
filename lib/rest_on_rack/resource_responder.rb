@@ -30,8 +30,8 @@ class Rack::REST::ResourceResponder < Rack::Request
   # We use a special resource class for errors to enable content type negotiation for them
   def error_response(status, headers={})
     error_resource = Rack::REST::Resource::Error.new(status)
-    error_responder = Rack::REST::ResourceResponder.new(error_resource, @request)
-    response = error_responder.get_response
+    response = Rack::REST::Response.new
+    response.entity = get_preferred_entity_representation(error_resource, nil, true)
     response.head_only = true if request_method == 'HEAD'
     response.status = status
     response.headers.merge!(headers)
@@ -160,7 +160,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def get_preferred_entity_representation(resource, add_to_response=nil)
+  def get_preferred_entity_representation(resource, add_to_response=nil, ignore_unacceptable_accepts=false)
     # We only handle range requests when a direct GET to this resource is being made.
     # TODO: fix behaviour in combination with If-Match - should this use the etag from the full (not partial) response, or be range-sensitive?
     range = (handle_range_request(add_to_response) if resource == @resource && request_method == 'GET')
@@ -170,7 +170,7 @@ class Rack::REST::ResourceResponder < Rack::Request
       # The resource supports some kind of content negotiation
       # Add relevant headers to a response if passed:
       add_to_response.add_header_values('Vary', s_mtype && 'Accept', s_lang && 'Accept-Language') if add_to_response
-      Rack::REST::Negotiator.new(@request, s_mtype, s_lang)
+      Rack::REST::Negotiator.new(@request, s_mtype, s_lang, ignore_unacceptable_accepts)
     end
 
     entity = if negotiator && negotiator.negotiation_requested?

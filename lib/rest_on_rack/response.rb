@@ -23,7 +23,7 @@ class Rack::REST::Response
 
   def entity=(entity)
     content_type = entity.media_type
-    content_type << "; charset=#{entity.encoding}" if entity.encoding
+    content_type = "#{content_type}; charset=#{entity.encoding}" if entity.encoding
     etag = entity.etag
 
     @headers['Content-Type'] = content_type

@@ -56,4 +56,30 @@ module Rack::REST::TestCase
     uri, params, env = *p
     request(uri, (env || {}).merge(:method => method, :params => params || {}), &block)
   end
+
+  def mock_entity(data, media_type='text/html', language=nil)
+    Rack::REST::Entity.new(:media_type => media_type, :language => language) {data}
+  end
+
+  def mock_resource(*p); Rack::REST::MockResource.new(*p); end
+end
+
+class Rack::MockResponse
+
+  # Useful to have these helpers in MockResponse corresponding to those in request:
+
+  def media_type
+    content_type && content_type.split(/\s*[;,]\s*/, 2)[0].downcase
+  end
+
+  def media_type_params
+    return {} if content_type.nil?
+    content_type.split(/\s*[;,]\s*/)[1..-1].
+      collect { |s| s.split('=', 2) }.
+      inject({}) { |hash,(k,v)| hash[k.downcase] = v ; hash }
+  end
+
+  def content_charset
+    media_type_params['charset']
+  end
 end

@@ -9,7 +9,7 @@ class ResourceResolutionTest < Test::Unit::TestCase
   end
 
   def test_successful_resolution_via_subresource
-    root_resource.expects(:subresource).with('abc').returns(Rack::REST::MockResource.new).once
+    root_resource.expects(:subresource).with('abc').returns(mock_resource).once
     assert_equal STATUS_OK, get('/abc').status
   end
 
@@ -19,22 +19,22 @@ class ResourceResolutionTest < Test::Unit::TestCase
   end
 
   def test_successful_multistage_resolution_via_subresource
-    sub = Rack::REST::MockResource.new
+    sub = mock_resource
     root_resource.expects(:subresource).with('abc').returns(sub).once
-    sub.expects(:subresource).with('def').returns(Rack::REST::MockResource.new).once
+    sub.expects(:subresource).with('def').returns(mock_resource).once
     assert_equal STATUS_OK, get('/abc/def').status
   end
 
   def test_unsuccessful_multistage_resolution_via_subresource
-    sub = Rack::REST::MockResource.new
+    sub = mock_resource
     root_resource.expects(:subresource).with('abc').returns(sub).once
     sub.expects(:subresource).with('def').returns(nil).once
     assert_equal STATUS_NOT_FOUND, get('/abc/def').status
   end
 
   def test_successful_resolution_via_resolve_subresource
-    sub = Rack::REST::MockResource.new
-    subsub = Rack::REST::MockResource.new
+    sub = mock_resource
+    subsub = mock_resource
     root_resource.expects(:resolve_subresource).with(['abc','def','ghi']).returns([sub, ['ghi']]).once
     sub.expects(:resolve_subresource).with(['ghi']).returns([subsub, nil]).once
     subsub.expects(:resolve_subresource).never
