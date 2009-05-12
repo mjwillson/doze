@@ -2,11 +2,13 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/testtask'
 
+task 'default' => ['test']
+
 desc "Run all tests"
-task 'default' => ['test:functional']
+task 'test' => ['test:functional']
 
 namespace 'test' do
-  
+
   functional_tests = FileList['test/functional/**/*_test.rb']
 
   desc "Run functional tests"
@@ -16,15 +18,20 @@ namespace 'test' do
     t.verbose = true
     t.warning = true
   end
-  
-  require 'rcov/rcovtask'
-  Rcov::RcovTask.new('coverage') do |t|
-    t.libs << 'test'
-    t.test_files = functional_tests
-    t.verbose = true
-    t.warning = true
-    t.rcov_opts << '--sort coverage'
-    t.rcov_opts << '--xref'
+
+  begin
+    require 'rcov/rcovtask'
+    Rcov::RcovTask.new('coverage') do |t|
+      t.libs << 'test'
+      t.test_files = functional_tests
+      t.verbose = true
+      t.warning = true
+      t.rcov_opts << '--sort coverage'
+      t.rcov_opts << '--xref'
+    end
+  rescue LoadError
+    desc '"gem install rcov" to enable this'
+    task 'coverage' => []
   end
 end
 
