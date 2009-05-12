@@ -9,6 +9,13 @@ class IdentifierTest < Test::Unit::TestCase
     assert_equal [], root_resource.identifier_components
   end
 
+  def test_has_identifier
+    assert_equal false, mock_resource.has_identifier?
+    assert_equal true, mock_resource(nil, []).has_identifier?
+    assert_equal false, mock_resource(mock_resource, ['foo']).has_identifier?
+    assert_equal true, mock_resource(mock_resource(nil, []), ['foo']).has_identifier?
+  end
+
   def test_root_resource_identifier_with_script_name
     root_resource.expects(:resolve_subresource).with(['boz']).once
     get('/boz', {}, {'SCRIPT_NAME' => '/foo%20bar/baz'})
