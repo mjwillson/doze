@@ -31,7 +31,9 @@ module Rack::REST::Resource
   attr_reader :identifier_components
 
   # A resource has_identifier? if identifier_components are set. A resource which has_identifier? can be referred to
-  def has_identifier?; !@identifier_components.nil?; end
+  def has_identifier?
+    !@identifier_components.nil?
+  end
 
   # The parent resource. Having a parent resource implies that the parent's identifier_components array is a prefix of yours, hence a hierarchy of identifiers.
   # If you don't like hierarchies, you're of course welcome to have a flat identifier scheme where everything is a child of one root resource.
@@ -51,9 +53,11 @@ module Rack::REST::Resource
 
   # Convenience hook to resolve a subresource by a single identifier component (the most common case)
   def subresource(identifier_component)
+    nil
   end
 
   def put_subresource_from_identifier_components(*components)
+    nil
   end
 
   def require_authentication?
@@ -64,13 +68,17 @@ module Rack::REST::Resource
     true
   end
 
-  def exists?; true; end
+  def exists?
+    true
+  end
 
   STANDARD_RESTFUL_METHODS = ['get', 'post', 'put', 'delete']
   # for every method here there should be a supports_foo?
 
-  # Recognizing a method just means, 'we know what you mean here'. Whether this resource supports_method? it is another question.
-  # (this is to distinguish 'method not implemented' from 'method not allowed')
+  # Recognizing a method just means, 'we know what you mean here'. Whether this resource supports_method? it is another question, which
+  # will only be asked if the method is recognized.
+  # This is to distinguish 'method not implemented' from 'method not allowed'. Also ensures that supports_method doesn't get passed
+  # anything stupid and/or dangerous from user input.
   def recognizes_method?(method)
     STANDARD_RESTFUL_METHODS.include?(method)
   end
@@ -80,12 +88,25 @@ module Rack::REST::Resource
     send(method, *args, &block) if respond_to?(method)
   end
 
-  def supports_method?(method); try("supports_#{method}?"); end
+  def supports_method?(method)
+    try("supports_#{method}?")
+  end
 
-  def supports_get?;    true;  end
-  def supports_put?;    false; end
-  def supports_post?;   false; end
-  def supports_delete?; false; end
+  def supports_get?
+    true
+  end
+
+  def supports_put?
+    false
+  end
+
+  def supports_post?
+    false
+  end
+
+  def supports_delete?
+    false
+  end
 
   def supported_methods
     STANDARD_RESTFUL_METHODS.select {|method| supports_method?(method)}
@@ -93,8 +114,13 @@ module Rack::REST::Resource
 
   # Content negotiation and getting resource representation(s)
 
-  def supports_media_type_negotiation?; false; end
-  def supports_language_negotiation?;   false; end
+  def supports_media_type_negotiation?
+    false
+  end
+
+  def supports_language_negotiation?
+    false
+  end
 
   # GET methods
   #
@@ -133,6 +159,7 @@ module Rack::REST::Resource
   #
   # A returned resource must have an identifier; in the case of HTTP this would lead to a redirect to that resource.
   def get_resource_representation
+    nil
   end
 
 
@@ -145,6 +172,7 @@ module Rack::REST::Resource
   #
   # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
   def put(entity)
+    nil
   end
 
   # Called to delete this resource.
@@ -155,6 +183,7 @@ module Rack::REST::Resource
   #
   # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
   def delete
+    nil
   end
 
   # Intended to be called in order to:
@@ -181,6 +210,7 @@ module Rack::REST::Resource
   #   * A Rack::REST::Entity, which will be taken to be a returned description of the results of some arbitrary operation performed
   #     (this one even more discouraged, but there if you need a quick way to make an arbitrary fixed response)
   def post(entity)
+    nil
   end
 
   # This allows you to accept methods other than the standard get/put/post/delete from HTTP. When the resource is exposed over a protocol (or requested by a client)
@@ -204,14 +234,20 @@ module Rack::REST::Resource
   # Return options are the same as for post, as are their interpretations, with the exception that a resource returned will not be assumed to be newly-created.
   # (we're taking the stance that you should be using post or put for creation of new resources)
   def other_method(method_name, entity=nil)
+    nil
   end
 
   def accepts_method_with_media_type?(resource_method, media_type)
     try("accepts_#{resource_method}_with_media_type?", media_type)
   end
 
-  def accepts_put_with_media_type?(media_type); false; end
-  def accepts_post_with_media_type?(media_type); false; end
+  def accepts_put_with_media_type?(media_type)
+    false
+  end
+
+  def accepts_post_with_media_type?(media_type)
+    false
+  end
 
 
 
@@ -219,19 +255,30 @@ module Rack::REST::Resource
 
   # May return a Time object inidicating the last modification date, or nil if not known
   def last_modified
+    nil
   end
 
   # nil = no explicit policy, false = explicitly no caching, true = caching yes please
-  def cacheable?; end
+  def cacheable?
+    nil
+  end
+
   # false here (when cacheable? is true) implies that private caching only is desired.
-  def publicly_cacheable?; cacheable?; end
+  def publicly_cacheable?
+    cacheable?
+  end
 
   # Integer seconds, or nil for no explicitly-specified expiry period. Will only be checked if cacheable? is true.
   # todo: a means to specify the equivalent of 'must-revalidate'
-  def cache_expiry_period; end
+  def cache_expiry_period
+    nil
+  end
+
   # You can override public_cache_expiry_period to specify a longer or shorter period for public caches.
   # Otherwise assumed same as general cache_expiry_period.
-  def public_cache_expiry_period; end
+  def public_cache_expiry_period
+    nil
+  end
 
 
 
@@ -239,9 +286,14 @@ module Rack::REST::Resource
   # Put to missing subresource
 
   # Equivalent to supports_put?, but is given child_identifier_components for the proposed subresource
-  def supports_put_to_missing_subresource?(child_identifier_components); false; end
+  def supports_put_to_missing_subresource?(child_identifier_components)
+    false
+  end
+
   # Equivalent to accepts_put_with_media_type?, but is given child_identifier_components for the proposed subresource
-  def accepts_put_to_missing_subresource_with_media_type?(child_identifier_components, media_type); false; end
+  def accepts_put_to_missing_subresource_with_media_type?(child_identifier_components, media_type)
+    false
+  end
 
   # Called to create a new subresource with the identifier given by child_identifier_components ontop of the identifier_components of self.
   # The new resource created must have the given entity as one of its representations (or a resource-level semantic equivalent).
@@ -252,6 +304,7 @@ module Rack::REST::Resource
   #
   # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
   def put_to_missing_subresource(child_identifier_components, entity)
+    nil
   end
 
 
@@ -265,7 +318,9 @@ module Rack::REST::Resource
   # If there are supported_range_units, then calls to get may be passed an instance of Rack::REST::Range.
   # get must then return the whole collection (if range not given) or just the range specified (if given)
   # or nil (if the range specified turns out to be unsatisfiable).
-  def supported_range_units; end
+  def supported_range_units
+    nil
+  end
 
   # Where range units are supported and a range request is made, one of these will be called instead of get_entity_representation(s).
   # See get_entity_representations
@@ -283,15 +338,21 @@ module Rack::REST::Resource
   # Given a supported unit type, should return an integer for how many of that unit exist in this resource.
   # May return nil if the length is not known upfront or you don't wish to calculate it upfront; in this case
   # length_of_range_satisfiable will be called to establish how much of the range is able to be satisfied.
-  def range_length(units, negotiator=nil); end
+  def range_length(units, negotiator=nil)
+    nil
+  end
 
   # Only called if range_length is not known. Given a Rack::REST::Range, return the length of that range
   # which you will be able to satisfy. Something between 0 and range.length. You could use this eg to 'suck it and see'
   # via an sql query with an offset and limit, without asking for the total count.
-  def length_of_range_satisfiable(range, negotiator=nil); end
+  def length_of_range_satisfiable(range, negotiator=nil)
+    nil
+  end
 
   # Passed a Rack::REST::Range, your chance to reject it outright for perfomance or other arbitrary reasons (like, eg, too long, too big an offset).
   # Note that you don't need to check whether it's within the total length of your collection; you should define range_length
   # so that this check can be performed separately.
-  def range_acceptable?(range, negotiator=nil); true; end
+  def range_acceptable?(range, negotiator=nil)
+    true
+  end
 end

@@ -1,3 +1,13 @@
 ORM resource wrappers
 
-Test suite
+Tests:
+ - range requests
+ - put, delete, post, other_method
+ - put to missing subresource
+ - cache headers
+ - request preconditions
+ - exists?
+ - auth(n|z)
+ - resource representations
+ - error handling
+ - method tunnelling
