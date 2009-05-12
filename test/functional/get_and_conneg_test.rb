@@ -39,6 +39,13 @@ class GetAndConnegTest < Test::Unit::TestCase
     assert !(last_response.headers['Vary'] || '').split(/,\s*/).include?('Accept-Language')
   end
 
+  def test_not_exists_get
+    root_resource.expects(:exists?).returns(false).once
+    root_resource.expects(:get_entity_representation).never
+    root_resource.expects(:get_entity_representations).never
+    assert_equal STATUS_NOT_FOUND, get.status
+  end
+
   def test_get_with_media_type_negotiation_and_no_accept
     root_resource.expects(:supports_media_type_negotiation?).returns(true).once
     root_resource.expects(:get_entity_representation).returns(@entities.first).once

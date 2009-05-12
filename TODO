@@ -4,7 +4,6 @@ Tests:
  - range requests
  - put, delete, post, other_method
  - put to missing subresource
- - exists?
  - auth(n|z)
  - resource representations
  - error handling
