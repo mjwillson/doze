@@ -25,11 +25,12 @@ class Rack::REST::Application
       raise unless @catch_exceptions
       env['rack.error'].write("#{e}:\n\n#{e.backtrace.join("\n")}")
       begin
-        error_resource  = Rack::REST::Resource::Error.new(STATUS_INTERNAL_SERVER_ERROR)
-        error_responder = Rack::REST::ResourceResponder.new(error_resource, request)
-        response = error_responder.get_response
+        error_resource = Rack::REST::Resource::Error.new(STATUS_INTERNAL_SERVER_ERROR)
+        response = Rack::REST::Response.new
+        response.entity = get_preferred_entity_representation(error_resource, nil, true)
         response.status = STATUS_INTERNAL_SERVER_ERROR
-        response.finish(@request.method == 'HEAD')
+        response.head_only = true if @request.method == 'HEAD'
+        response.finish
       rescue
         [STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
       end
