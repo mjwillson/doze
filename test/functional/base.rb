@@ -81,6 +81,18 @@ module Rack::REST::TestCase
     end
   end
 
+  def assert_response_header_exists(header, message=nil)
+    assert_block(build_message(message, "<?> response header was expected", header)) do
+      r = last_response and !r.headers[header].nil?
+    end
+  end
+
+  def assert_no_response_header(header, message=nil)
+    assert_block(build_message(message, "<?> response header was not expected", header)) do
+      r = last_response and r.headers[header].nil?
+    end
+  end
+
 end
 
 class Rack::MockResponse

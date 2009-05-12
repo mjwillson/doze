@@ -75,7 +75,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   def request_method
     @request_method ||= begin
       method = @request.request_method
-      (@request.env['HTTP_X_HTTP_METHOD_OVERRIDE'] || @request.GET('_method') if method == 'POST') || method
+      (@request.env['HTTP_X_HTTP_METHOD_OVERRIDE'] || @request.GET['_method'] if method == 'POST') || method
     end
   end
 
