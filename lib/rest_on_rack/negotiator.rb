@@ -6,7 +6,7 @@ class Rack::REST::Negotiator
     @negotiation_requested = false; @ignore_unacceptable_accepts = ignore_unacceptable_accepts
     @media_type_criterea = if accept_header && supports_media_type_negotiation
       @negotiation_requested = true
-      parse_accept_header(accept_header).sort_by {|matcher,specificity,q| -specificity}
+      parse_accept_header(accept_header) {|range| matcher_from_media_range(range)}.sort_by {|matcher,specificity,q| -specificity}
     else
       [[Object, 0, 1.0]]
     end
@@ -14,7 +14,7 @@ class Rack::REST::Negotiator
     accept_language_header = request.env['HTTP_ACCEPT_LANGUAGE']
     @language_criterea = if accept_language_header && supports_language_negotiation
       @negotiation_requested = true
-      parse_accept_header(accept_language_header).sort_by {|matcher,specificity,q| -specificity}
+      parse_accept_header(accept_language_header) {|range| matcher_from_language_range(range)}.sort_by {|matcher,specificity,q| -specificity}
     else
       [[Object, 0, 1.0]]
     end
@@ -58,16 +58,28 @@ class Rack::REST::Negotiator
     # Given an http-style media-range, language-range, charset-range etc string, return a ruby object which answers to ===(string)
     # for whether or not that string matches the range given. (note: these are useful in combination with Enumerable#grep)
     # together with a priority value for the priority of this matcher (most specific has highest priority)
-    # Example input: *, text/*, text/html, en-gb, utf-8
-    def matcher_from_http_range_string(range_string)
+    # Example input: *, text/*, text/html, en, en-gb, utf-8
+    def matcher_from_media_range(range_string)
+      case range_string
+      when '*', '*/*'
+        # Object === 'anything'
+        [Object,                  0]
+      when /^(.*?\/)\*$/
+        # media type range eg text/*
+        [/^#{Regexp.escape($1)}/, 1]
+      else
+        [range_string,            2]
+      end
+    end
+
+    def matcher_from_language_range(range_string)
       case range_string
       when '*'
         # Object === 'anything'
         [Object,                  0]
-      when /^(.*?\/)\*$/
-        [/^#{Regexp.escape($1)}/, 1]
       else
-        [range_string,            2]
+        # en matches en, en-gb, en-whatever-else-after-a-hyphen, with longer strings more specific
+        [/^#{Regexp.escape(range_string)}(-|$)/, range_string.length]
       end
     end
 
@@ -75,7 +87,7 @@ class Rack::REST::Negotiator
       accept_header_value.split(/,\s*/).map do |part|
         /^([^\s,]+?)(?:;\s*q=(\d+(?:\.\d+)?))?$/.match(part) or next # From WEBrick via Rack
         q = ($2 || 1.0).to_f
-        matcher, specificity = matcher_from_http_range_string($1)
+        matcher, specificity = yield($1)
         [matcher, specificity, q]
       end.compact
     end
