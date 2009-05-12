@@ -7,4 +7,3 @@ Tests:
  - auth(n|z)
  - resource representations
  - error handling
- - method tunnelling

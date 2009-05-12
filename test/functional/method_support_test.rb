@@ -49,4 +49,20 @@ class MethodSupportTest < Test::Unit::TestCase
     allow = last_response.headers['Allow'] and allow = allow.split(', ')
     assert_equal ['OPTIONS'], allow
   end
+
+  def test_method_tunnelling
+    root_resource.expects(:recognizes_method?).with('foo').returns(true).once
+    root_resource.expects(:supports_foo?).returns(true).once
+    root_resource.expects(:other_method).once
+    root_resource.expects(:post).never
+    post({}, {'HTTP_X_HTTP_METHOD_OVERRIDE' => 'FOO'})
+  end
+
+  def test_method_tunnelling2
+    root_resource.expects(:recognizes_method?).with('foo').returns(true).once
+    root_resource.expects(:supports_foo?).returns(true).once
+    root_resource.expects(:other_method).once
+    root_resource.expects(:post).never
+    post('/?_method=FOO')
+  end
 end
