@@ -62,6 +62,25 @@ module Rack::REST::TestCase
   end
 
   def mock_resource(*p); Rack::REST::MockResource.new(*p); end
+
+  def assert_response_header(header, value, message=nil)
+    assert_block(build_message(message, "<?> was expected for last response header <?>", value, header)) do
+      r = last_response and v = r.headers[header] and v == value
+    end
+  end
+
+  def assert_response_header_includes(header, value, message=nil)
+    assert_block(build_message(message, "<?> was expected in last response header <?>", value, header)) do
+      r = last_response and v = r.headers[header] and v.split(/,\s+/).include?(value)
+    end
+  end
+
+  def assert_response_header_not_includes(header, value, message=nil)
+    assert_block(build_message(message, "<?> was not expected in last response header <?>", value, header)) do
+      !(r = last_response and v = r.headers[header] and v.split(/,\s+/).include?(value))
+    end
+  end
+
 end
 
 class Rack::MockResponse

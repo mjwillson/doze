@@ -31,6 +31,9 @@ class GetAndConnegTest < Test::Unit::TestCase
     assert_equal STATUS_OK, get.status
     assert_equal 'foo', last_response.body
     assert_equal 'text/html', last_response.media_type
+    assert_not_nil last_response.headers['Date']
+    assert_in_delta Time.now, Time.httpdate(last_response.headers['Date']), 1
+    assert_equal 'foo'.length, last_response.headers['Content-Length'].to_i
     assert_nil last_response.headers['Content-Language']
     assert !(last_response.headers['Vary'] || '').split(/,\s*/).include?('Accept')
     assert !(last_response.headers['Vary'] || '').split(/,\s*/).include?('Accept-Language')

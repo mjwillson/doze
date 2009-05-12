@@ -194,7 +194,7 @@ class Rack::REST::ResourceResponder < Rack::Request
         if expiry_period
           cache_control << ", max-age=#{expiry_period}"
           public_expiry_period = resource.public_cache_expiry_period
-          cache_control << ", s-maxage=#{public_expire_period}" if public_expiry_period
+          cache_control << ", s-maxage=#{public_expiry_period}" if public_expiry_period
         end
       else
         cache_control = 'private'
