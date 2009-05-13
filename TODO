@@ -6,4 +6,3 @@ Tests:
  - put to missing subresource
  - auth(n|z)
  - resource representations
- - error handling

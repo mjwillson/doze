@@ -14,32 +14,36 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   attr_reader :root_resource, :request
 
-  def initialize(resource, request, identifier_components=[])
+  def initialize(resource, request, identifier_components=nil)
     @resource = resource
     @request = request
     @identifier_components = identifier_components
+    @direct_request = (identifier_components == [])
   end
 
   def raise_error(status, message=nil, headers={})
     raise Rack::REST::Error.new(status, message, headers)
   end
 
-  def respond
+  def response_to_direct_or_subresource_request
     # First of all we determine whether this is a direct request for this resource, a request on a subresource which we're able to resolve,
     # or a request on a missing subresource.
-    if @identifier_components.empty?
+    if @direct_request
       respond_to_direct_request
-    else
+    elsif @identifier_components
       check_authorization('resolve_subresource')
       subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components)
 
       if subresource
-        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components || []).respond
+        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components || []).response_to_direct_or_subresource_request
       else
         respond_to_request_on_missing_subresource
       end
+    else
+      raise 'identifier_components required for Rack::REST::ResourceResponder#response_to_direct_or_subresource_request'
     end
   end
+  alias :respond :response_to_direct_or_subresource_request
 
   # some general request and response helpers
 
@@ -104,7 +108,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     if_none_match = @request.env['HTTP_IF_NONE_MATCH']
     return unless if_match || if_none_match
 
-    entity ||= get_preferred_entity_representation(@resource) or return
+    entity ||= get_preferred_entity_representation or return
     etag = entity.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
@@ -146,12 +150,12 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def get_preferred_entity_representation(resource, add_to_response=nil, ignore_unacceptable_accepts=false)
+  def get_preferred_entity_representation(add_to_response=nil, ignore_unacceptable_accepts=false)
     # We only handle range requests when a direct GET to this resource is being made.
     # TODO: fix behaviour in combination with If-Match - should this use the etag from the full (not partial) response, or be range-sensitive?
-    range = (handle_range_request(add_to_response) if resource == @resource && request_method == 'GET')
+    range = (handle_range_request(add_to_response) if @direct_request && request_method == 'GET')
 
-    s_mtype, s_lang = resource.supports_media_type_negotiation?, resource.supports_language_negotiation?
+    s_mtype, s_lang = @resource.supports_media_type_negotiation?, @resource.supports_language_negotiation?
     negotiator = if s_mtype || s_lang
       # The resource supports some kind of content negotiation
       # Add relevant headers to a response if passed:
@@ -160,26 +164,26 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
 
     entity = if negotiator && negotiator.negotiation_requested?
-      entities = range ? response.get_entity_representations_with_range(range) : resource.get_entity_representations
+      entities = range ? response.get_entity_representations_with_range(range) : @resource.get_entity_representations
       negotiator.choose_entity(entities) or raise_error(STATUS_NOT_ACCEPTABLE)
     else
-      range ? resource.get_entity_representation_with_range(range) : resource.get_entity_representation
+      range ? @resource.get_entity_representation_with_range(range) : @resource.get_entity_representation
     end
 
     entity or raise_error(STATUS_INTERNAL_SERVER_ERROR)
   end
 
-  def add_caching_headers(resource, response)
+  def add_caching_headers(response)
     # resource-level caching metadata headers
-    last_modified = resource.last_modified and response.headers['Last-Modified'] = last_modified.httpdate
-    case resource.cacheable?
+    last_modified = @resource.last_modified and response.headers['Last-Modified'] = last_modified.httpdate
+    case @resource.cacheable?
     when true
-      expiry_period = resource.cache_expiry_period
-      if resource.publicly_cacheable?
+      expiry_period = @resource.cache_expiry_period
+      if @resource.publicly_cacheable?
         cache_control = 'public'
         if expiry_period
           cache_control << ", max-age=#{expiry_period}"
-          public_expiry_period = resource.public_cache_expiry_period
+          public_expiry_period = @resource.public_cache_expiry_period
           cache_control << ", s-maxage=#{public_expiry_period}" if public_expiry_period
         end
       else
@@ -194,16 +198,16 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def make_representation_of_resource_response(resource, check_precond=false)
+  def make_representation_of_resource_response(check_precond=false)
     response = Rack::REST::Response.new
 
-    add_caching_headers(resource, response)
+    add_caching_headers(response)
 
-    resource_representation = resource.get_resource_representation
+    resource_representation = @resource.get_resource_representation
     if resource_representation
       response.set_redirect(resource_representation)
     else
-      entity_representation ||= get_preferred_entity_representation(resource, response)
+      entity_representation ||= get_preferred_entity_representation(response)
 
       # preconditions on the representation only apply to the content that would be served up by a GET
       check_entity_preconditions(entity_representation) if check_precond
@@ -219,7 +223,7 @@ class Rack::REST::ResourceResponder < Rack::Request
       if result.has_identifier?
         Rack::REST::Response.new_redirect(result, status_for_resource_redirect_result)
       else
-        make_representation_of_resource_response(result)
+        Rack::REST::ResourceResponder.new(result, @request).make_representation_of_resource_response
       end
     when Rack::REST::Entity
       Rack::REST::Response.new_from_entity(result)
@@ -250,7 +254,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     check_authorization('get')
     check_resource_preconditions(STATUS_NOT_MODIFIED)
 
-    response = make_representation_of_resource_response(@resource, true)
+    response = make_representation_of_resource_response(true)
     response.head_only = true if request_method == 'HEAD'
     response
   end
