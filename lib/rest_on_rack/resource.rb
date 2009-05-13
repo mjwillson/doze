@@ -232,9 +232,12 @@ module Rack::REST::Resource
   # entity will be nil, or an entity whose media_type has been okayed by accepts_method_with_media_type?(method_name, ..)
   #
   # Return options are the same as for post, as are their interpretations, with the exception that a resource returned will not be assumed to be newly-created.
-  # (we're taking the stance that you should be using post or put for creation of new resources)
+  # (we're taking the stance that you should be using post or put for creation of new resources).
+  #
+  # By default it'll call a ruby method of the same name to call, as already happens for post/put/delete. This is safe as recognizes_method? and supports_method?
+  # will have been checked first.
   def other_method(method_name, entity=nil)
-    nil
+    try(method_name, entity)
   end
 
   def accepts_method_with_media_type?(resource_method, media_type)

@@ -9,7 +9,6 @@ class ResourceRepresentationTest < Test::Unit::TestCase
     root_resource.expects(:get_resource_representation).returns(resource)
     get
     assert_equal STATUS_SEE_OTHER, last_response.status
-    puts last_response.headers['Location']
     # also tests correct encoding:
     assert_response_header 'Location', 'http://example.org/identifier/components/foo%2Fbar'
   end

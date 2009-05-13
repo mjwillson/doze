@@ -50,7 +50,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   def check_method_support(resource_method, media_type=nil)
     raise_error(STATUS_NOT_IMPLEMENTED) unless @resource.recognizes_method?(resource_method)
     raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
-    raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
+    raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && !@resource.accepts_method_with_media_type?(resource_method, media_type)
   end
 
   def allow_header(resource_methods)
@@ -263,12 +263,13 @@ class Rack::REST::ResourceResponder < Rack::Request
     entity = request_entity
     check_method_support('put', entity && entity.media_type)
     check_authorization('put')
-    if @resource.exists? && @resource.supports_get?
+    existed_before = @resource.exists?
+    if existed_before && @resource.supports_get?
       check_resource_preconditions
       check_entity_preconditions
     end
     @resource.put(entity)
-    Rack::REST::Response.new_empty
+    Rack::REST::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
   end
 
   def delete_response

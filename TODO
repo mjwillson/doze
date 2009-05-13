@@ -2,6 +2,4 @@ ORM resource wrappers
 
 Tests:
  - range requests
- - put, delete, post, other_method
- - put to missing subresource
  - auth(n|z)
