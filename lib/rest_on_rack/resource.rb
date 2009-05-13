@@ -56,10 +56,6 @@ module Rack::REST::Resource
     nil
   end
 
-  def put_subresource_from_identifier_components(*components)
-    nil
-  end
-
   # Authorization / Authentication:
   #
   # Return true or false to allow or deny the given action on this resource for the given user (if user is nil, for the unauthenticated user).

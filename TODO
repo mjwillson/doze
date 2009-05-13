@@ -1,4 +1,6 @@
 ORM resource wrappers
 
 Tests:
- - auth(n|z)
+ - Refactor to be more DRY
+ - Perhaps use test/spec
+ - Cover more corner-cases and combinations of features working together

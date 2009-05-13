@@ -36,20 +36,7 @@ class Rack::REST::Negotiator
     media_type_quality(media_type)*language_quality(language)
   end
 
-  def choose_media_type(media_types)
-    max_by_non_zero(media_types) {|m| media_type_quality(m)}
-  end
-
-  def choose_language(languages)
-    max_by_non_zero(languages) {|l| language_quality(l)}
-  end
-
-  # Takes a list of [media_type, language] pairs
-  def choose(pairs)
-    max_by_non_zero(pairs) {|m,l| quality(m,l)}
-  end
-
-  # Like choose, but takes a list of Rack::REST::Entity
+  # Choose from a list of Rack::REST::Entity
   def choose_entity(entities)
     max_by_non_zero(entities) {|a| quality(a.media_type, a.language)}
   end
@@ -103,23 +90,4 @@ class Rack::REST::Negotiator
       end
       max_item || (@ignore_unacceptable_accepts && array.first)
     end
-
-  # TODO re-incorporate
-  #   ACCEPT_CHARSET_DEFAULT_QVALUES = {
-  #     AcceptHeaderRange.new('iso-8859-1') => 1,
-  #     AcceptHeaderRange.new('*') => 0
-  #   }
-  #   def negotiate_entity_character_encoding(entity)
-  #     accept_charset_header = @request.env['HTTP_ACCEPT_CHARSET'] and begin
-  #       ranges_qs = parse_accept_header(accept_charset_header, ACCEPT_CHARSET_DEFAULT_QVALUES)
-  #       if entity.supports_re_encoding?
-  #         preferred_range, preferred_q = ranges_qs.max {|(r1,q1),(r2,q2)| q1 <=> q2}
-  #         preferred_encoding = preferred_range.to_s
-  #         entity.re_encode!(preferred_encoding) if preferred_encoding != '*'
-  #       else
-  #         return unless ranges_qs.any? {|r,q| r === entity.encoding && q > 0}
-  #       end
-  #     end
-  #     entity
-  #   end
 end
