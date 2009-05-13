@@ -336,7 +336,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     entity = request_entity
 
     unless @resource.supports_put_to_missing_subresource?(@identifier_components)
-      raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header(supported_methods_on_missing_subresource))
+      raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header([]))
     end
 
     if entity && entity.media_type && !@resource.accepts_put_to_missing_subresource_with_media_type?(@identifier_components, entity.media_type)

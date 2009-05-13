@@ -27,4 +27,12 @@ class PutToMissingSubresourceTest < Test::Unit::TestCase
     put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
     assert_equal STATUS_CREATED, last_response.status
   end
+
+  def test_put_to_missing_subresource_when_not_supported
+    root_resource.expects(:supports_put_to_missing_subresource?).with(['blah']).returns(false).once
+    root_resource.expects(:accepts_put_to_missing_subresource_with_media_type?).never
+    root_resource.expects(:put_to_missing_subresource).never
+    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    assert_equal STATUS_METHOD_NOT_ALLOWED, last_response.status
+  end
 end
