@@ -1,14 +1,34 @@
 require 'rest_on_rack/utils'
+require 'rest_on_rack/error'
 require 'rest_on_rack/resource_responder'
 class Rack::REST::Application
   include Rack::REST::Utils
 
-  def initialize(resource, catch_exceptions=true)
+  def initialize(resource, error_resource_class=Rack::REST::Resource::Error, catch_application_errors=true)
     @root_resource = resource
-    # Setting this to false is useful for testing, so an exception can make a test fail via
+    # Setting this to nil is useful for testing, so an exception can make a test fail via
     # the normal channels rather than having to check and parse it out of a response.
-    @catch_exceptions = catch_exceptions
+    @error_resource_class = error_resource_class
+    @catch_application_errors = catch_application_errors
     @script_name = nil
+  end
+
+  # We use a resource class to represent for errors to enable content type negotiation for them.
+  # The class used is configurable but defaults to Rack::REST::Resource::Error
+  def error_response(error, request)
+    response = Rack::REST::Response.new
+    if @error_resource_class
+      error_resource = @error_resource_class.new(error.http_status, error.message)
+      responder = Rack::REST::ResourceResponder.new(error_resource, request)
+      response.entity = responder.get_preferred_entity_representation(error_resource, nil, true)
+    else
+      response.headers['Content-Type'] = 'text/plain'
+      response.body = error.message
+    end
+    response.head_only = true if request.request_method == 'HEAD'
+    response.status = error.http_status
+    response.headers.merge!(error.headers) if error.headers
+    response
   end
 
   def call(env)
@@ -19,21 +39,18 @@ class Rack::REST::Application
 
     responder = Rack::REST::ResourceResponder.new(@root_resource, request, identifier_components)
     begin
-      response = catch(:response) { responder.respond }
-      response.finish
-    rescue => e
-      raise unless @catch_exceptions
-      env['rack.error'].write("#{e}:\n\n#{e.backtrace.join("\n")}")
       begin
-        error_resource = Rack::REST::Resource::Error.new(STATUS_INTERNAL_SERVER_ERROR)
-        response = Rack::REST::Response.new
-        response.entity = get_preferred_entity_representation(error_resource, nil, true)
-        response.status = STATUS_INTERNAL_SERVER_ERROR
-        response.head_only = true if @request.method == 'HEAD'
-        response.finish
+        responder.respond.finish
+      rescue Rack::REST::Error => error
+        error_response(error, request).finish
       rescue
-        [STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
+        raise unless @catch_application_errors
+        error = Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR)
+        error_response(error, request).finish
       end
+    rescue
+      raise unless @catch_application_errors
+      [STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
     end
   end
 

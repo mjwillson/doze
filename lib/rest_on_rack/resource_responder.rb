@@ -2,6 +2,7 @@
 
 require 'time' # httpdate
 require 'rest_on_rack/utils'
+require 'rest_on_rack/error'
 require 'rest_on_rack/resource'
 require 'rest_on_rack/entity'
 require 'rest_on_rack/response'
@@ -19,23 +20,8 @@ class Rack::REST::ResourceResponder < Rack::Request
     @identifier_components = identifier_components
   end
 
-  # We use some admittedly-rather-GOTO-like control flow (via throw/catch) to throw failure responses.
-  # I think the logic is actually more readable this way; there are a lot of different points along the process where a
-  # request can fail with a particular response code, and it saves us having to indicate (and check for) a distinct failure
-  # response type from each function call along the way
-  def throw_error_response(status, headers={})
-    throw(:response, error_response(status, headers))
-  end
-
-  # We use a special resource class for errors to enable content type negotiation for them
-  def error_response(status, headers={})
-    error_resource = Rack::REST::Resource::Error.new(status)
-    response = Rack::REST::Response.new
-    response.entity = get_preferred_entity_representation(error_resource, nil, true)
-    response.head_only = true if request_method == 'HEAD'
-    response.status = status
-    response.headers.merge!(headers)
-    response
+  def raise_error(status, message=nil, headers={})
+    raise Rack::REST::Error.new(status, message, headers)
   end
 
   def respond
@@ -58,9 +44,9 @@ class Rack::REST::ResourceResponder < Rack::Request
   # some general request and response helpers
 
   def check_method_support(resource_method, media_type=nil)
-    throw_error_response(STATUS_NOT_IMPLEMENTED) unless @resource.recognizes_method?(resource_method)
-    throw_error_response(STATUS_METHOD_NOT_ALLOWED, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
-    throw_error_response(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
+    raise_error(STATUS_NOT_IMPLEMENTED) unless @resource.recognizes_method?(resource_method)
+    raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
+    raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && @resource.accepts_method_with_media_type?(resource_method, media_type)
   end
 
   def allow_header(resource_methods)
@@ -97,9 +83,9 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   def check_authorization(action)
     if @resource.require_authentication? && !authenticated_user
-      throw_error_response(STATUS_UNAUTHORIZED) # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
+      raise_error(STATUS_UNAUTHORIZED) # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
     elsif !@resource.authorize(action, authenticated_user)
-      throw_error_response(STATUS_FORBIDDEN) # this one, 403, really means 'unauthorized'
+      raise_error(STATUS_FORBIDDEN) # this one, 403, really means 'unauthorized'
     end
   end
 
@@ -109,7 +95,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     if_unmodified_since = @request.env['HTTP_IF_UNMODIFIED_SINCE']
     if (if_modified_since   && last_modified <= Time.httpdate(if_modified_since)) ||
        (if_unmodified_since && last_modified >  Time.httpdate(if_unmodified_since)) then
-      throw_error_response(failure_status)
+      raise_error(failure_status)
     end
   end
 
@@ -124,7 +110,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
     if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     quote(etag)))) ||
        (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(quote(etag))))) then
-      throw_error_response(STATUS_PRECONDITION_FAILED)
+      raise_error(STATUS_PRECONDITION_FAILED)
     end
   end
 
@@ -138,7 +124,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     range = Rack::REST::Range.from_request(@request) or return
 
     if !supported_range_units.include?(range.units) || range.length <= 0 || !@resource.range_acceptable?(range, negotiator)
-      throw_error_response(STATUS_BAD_REQUEST)
+      raise_error(STATUS_BAD_REQUEST)
     end
 
     total_length = @resource.range_length(range.units)
@@ -152,7 +138,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
 
     if range.length <= 0
-      throw_error_response(STATUS_REQUESTED_RANGE_NOT_SATISFIABLE, 'Content-Range' => "#{range.units} */#{total_length || '*'}")
+      raise_error(STATUS_REQUESTED_RANGE_NOT_SATISFIABLE, nil, 'Content-Range' => "#{range.units} */#{total_length || '*'}")
     else
       add_to_response.status = STATUS_PARTIAL_CONTENT
       add_to_response.headers['Content-Range'] = "#{range.units} #{range.begin}-#{range.end-1}/#{total_length || '*'}"
@@ -175,12 +161,12 @@ class Rack::REST::ResourceResponder < Rack::Request
 
     entity = if negotiator && negotiator.negotiation_requested?
       entities = range ? response.get_entity_representations_with_range(range) : resource.get_entity_representations
-      negotiator.choose_entity(entities) or throw_error_response(STATUS_NOT_ACCEPTABLE)
+      negotiator.choose_entity(entities) or raise_error(STATUS_NOT_ACCEPTABLE)
     else
       range ? resource.get_entity_representation_with_range(range) : resource.get_entity_representation
     end
 
-    entity or throw_error_response(STATUS_INTERNAL_SERVER_ERROR)
+    entity or raise_error(STATUS_INTERNAL_SERVER_ERROR)
   end
 
   def add_caching_headers(resource, response)
@@ -259,7 +245,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def get_response(head_only=false)
-    throw_error_response(STATUS_NOT_FOUND) unless @resource.exists?
+    raise_error(STATUS_NOT_FOUND) unless @resource.exists?
     check_method_support('get')
     check_authorization('get')
     check_resource_preconditions(STATUS_NOT_MODIFIED)
@@ -332,7 +318,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     case request_method
     when 'PUT'      then put_to_missing_subresource_response
     when 'OPTIONS'  then options_response(supported_methods_on_missing_subresource)
-    end or throw_error_response(STATUS_NOT_FOUND)
+    end or raise_error(STATUS_NOT_FOUND)
   end
 
   def supported_methods_on_missing_subresource
@@ -343,11 +329,11 @@ class Rack::REST::ResourceResponder < Rack::Request
     entity = request_entity
 
     unless @resource.supports_put_to_missing_subresource?(@identifier_components)
-      throw_error_response(STATUS_METHOD_NOT_ALLOWED, allow_header(supported_methods_on_missing_subresource))
+      raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header(supported_methods_on_missing_subresource))
     end
 
     if entity && entity.media_type && !@resource.accepts_put_to_missing_subresource_with_media_type?(@identifier_components, entity.media_type)
-      throw_error_response(STATUS_UNSUPPORTED_MEDIA_TYPE)
+      raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE)
     end
 
     check_authorization('put_to_missing_subresource')
