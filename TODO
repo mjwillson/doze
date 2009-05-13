@@ -5,4 +5,3 @@ Tests:
  - put, delete, post, other_method
  - put to missing subresource
  - auth(n|z)
- - resource representations

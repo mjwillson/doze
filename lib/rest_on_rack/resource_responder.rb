@@ -205,7 +205,7 @@ class Rack::REST::ResourceResponder < Rack::Request
 
     resource_representation = @resource.get_resource_representation
     if resource_representation
-      response.set_redirect(resource_representation)
+      response.set_redirect(resource_representation, @request)
     else
       entity_representation ||= get_preferred_entity_representation(response)
 
@@ -221,7 +221,7 @@ class Rack::REST::ResourceResponder < Rack::Request
     case result
     when Rack::REST::Resource
       if result.has_identifier?
-        Rack::REST::Response.new_redirect(result, status_for_resource_redirect_result)
+        Rack::REST::Response.new_redirect(result, @request, status_for_resource_redirect_result)
       else
         Rack::REST::ResourceResponder.new(result, @request).make_representation_of_resource_response
       end
