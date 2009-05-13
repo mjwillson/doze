@@ -87,10 +87,11 @@ class Rack::REST::ResourceResponder < Rack::Request
   end
 
   def check_authorization(action)
-    if @resource.require_authentication? && !authenticated_user
-      raise_error(STATUS_UNAUTHORIZED) # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
-    elsif !@resource.authorize(action, authenticated_user)
-      raise_error(STATUS_FORBIDDEN) # this one, 403, really means 'unauthorized'
+    unless @resource.authorize(authenticated_user, action)
+      raise_error(authenticated_user ?
+                  STATUS_FORBIDDEN :   # this one, 403, really means 'unauthorized', ie
+                  STATUS_UNAUTHORIZED  # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
+      )
     end
   end
 

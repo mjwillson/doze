@@ -1,5 +1,4 @@
 ORM resource wrappers
 
 Tests:
- - range requests
  - auth(n|z)

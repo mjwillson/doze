@@ -60,14 +60,28 @@ module Rack::REST::Resource
     nil
   end
 
-  def require_authentication?
-    false
-  end
-
-  def authorize(action, user)
+  # Authorization / Authentication:
+  #
+  # Return true or false to allow or deny the given action on this resource for the given user (if user is nil, for the unauthenticated user).
+  # If you deny an action by the unauthenticated user, this will be taken as a requirement for authentication. So eg if authentication is all you require,
+  # you could just return !user.nil?
+  #
+  # action will be one of: get, resolve_subresource, put, put_to_missing_subresource, post, delete, or some other method name which you recognizes_method? and supports_method?
+  # user will be the authenticated user, or nil if there is no authenticated user. The exact nature of the user object will depend on the middleware used to do authentication.
+  #
+  # the reason resolve_subresource is included alongside the request methods as an action for authorization is so that you can easily implement simple blanket
+  # authorization rules for all subresources of a given resource.
+  def authorize(user, action)
     true
   end
 
+  # You can return false here to make a resource instance act like it doesn't exist, as an alternative to returning nil from resolve_subresource on the parent.
+  #
+  # You could use this if it's more convenient to have resolve_subresource create an instance representing the potentially-extant resource,
+  # and to have the existence test run on the instance.
+  #
+  # Or you can use it if you want to support certain non-get methods on a resource, but appear non-existent in response to get requests.
+  # (implementing put_to_missing_subresource on the parent resource is available too as an alternative for implementing put on a non-existent resource)
   def exists?
     true
   end
