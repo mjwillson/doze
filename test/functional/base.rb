@@ -11,13 +11,6 @@ class Rack::REST::MockResource
   alias :initialize :initialize_resource
 end
 
-class Rack::Test::Session
-  # silence warning here (did they mean to use ||= ?)
-  def cookie_jar
-    defined?(@cookie_jar) && @cookie_jar || Rack::Test::CookieJar.new
-  end
-end
-
 module Rack::REST::TestCase
   include Rack::Test::Methods
 

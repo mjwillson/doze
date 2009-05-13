@@ -16,7 +16,6 @@ namespace 'test' do
     t.libs << 'test'
     t.test_files = functional_tests
     t.verbose = true
-    t.warning = true
   end
 
   begin
@@ -25,7 +24,6 @@ namespace 'test' do
       t.libs << 'test'
       t.test_files = functional_tests
       t.verbose = true
-      t.warning = true
       t.rcov_opts << '--sort coverage'
       t.rcov_opts << '--xref'
     end
