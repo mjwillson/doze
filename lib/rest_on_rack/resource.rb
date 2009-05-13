@@ -341,21 +341,21 @@ module Rack::REST::Resource
   # Given a supported unit type, should return an integer for how many of that unit exist in this resource.
   # May return nil if the length is not known upfront or you don't wish to calculate it upfront; in this case
   # length_of_range_satisfiable will be called to establish how much of the range is able to be satisfied.
-  def range_length(units, negotiator=nil)
+  def range_length(units)
     nil
   end
 
   # Only called if range_length is not known. Given a Rack::REST::Range, return the length of that range
   # which you will be able to satisfy. Something between 0 and range.length. You could use this eg to 'suck it and see'
   # via an sql query with an offset and limit, without asking for the total count.
-  def length_of_range_satisfiable(range, negotiator=nil)
+  def length_of_range_satisfiable(range)
     nil
   end
 
   # Passed a Rack::REST::Range, your chance to reject it outright for perfomance or other arbitrary reasons (like, eg, too long, too big an offset).
   # Note that you don't need to check whether it's within the total length of your collection; you should define range_length
   # so that this check can be performed separately.
-  def range_acceptable?(range, negotiator=nil)
+  def range_acceptable?(range)
     true
   end
 end

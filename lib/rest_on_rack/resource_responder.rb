@@ -7,6 +7,7 @@ require 'rest_on_rack/resource'
 require 'rest_on_rack/entity'
 require 'rest_on_rack/response'
 require 'rest_on_rack/negotiator'
+require 'rest_on_rack/range'
 require 'rest_on_rack/resource/error'
 
 class Rack::REST::ResourceResponder < Rack::Request
@@ -127,7 +128,7 @@ class Rack::REST::ResourceResponder < Rack::Request
 
     range = Rack::REST::Range.from_request(@request) or return
 
-    if !supported_range_units.include?(range.units) || range.length <= 0 || !@resource.range_acceptable?(range, negotiator)
+    if !supported_range_units.include?(range.units) || range.length <= 0 || !@resource.range_acceptable?(range)
       raise_error(STATUS_BAD_REQUEST)
     end
 
