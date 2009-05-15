@@ -49,7 +49,7 @@ class EntityPreconditionTest < Test::Unit::TestCase
     @entity = mock_entity('foo')
     @etag = '123abc'
     @entity.expects(:etag).returns(@etag).at_least_once
-    root_resource.expects(:get_entity_representation).returns(@entity).at_least_once
+    root_resource.expects(:get).returns(@entity).at_least_once
   end
 
   def test_if_match

@@ -6,7 +6,7 @@ class ResourceRepresentationTest < Test::Unit::TestCase
 
   def test_get_with_resource_representation
     resource = mock_resource(nil, ['identifier', 'components', 'foo/bar'])
-    root_resource.expects(:get_resource_representation).returns(resource)
+    root_resource.expects(:get).returns(resource)
     get
     assert_equal STATUS_SEE_OTHER, last_response.status
     # also tests correct encoding:

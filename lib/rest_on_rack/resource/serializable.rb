@@ -7,7 +7,7 @@ module Rack::REST::Resource::Serializable
   def data_to_serialize
   end
 
-  def get_entity_representations
+  def get
     [
       Rack::REST::Entity.new(:media_type => 'application/json', :encoding => 'utf-8') {data_to_serialize.to_json},
       Rack::REST::Entity.new(:media_type => 'application/yaml', :encoding => 'utf-8') {data_to_serialize.to_yaml}

@@ -1,4 +1,10 @@
+Collection resources
+ - Hash / Map
+ - Array
+
 ORM resource wrappers
+
+Refactor get_* to get
 
 Tests:
  - Refactor to be more DRY

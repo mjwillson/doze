@@ -78,7 +78,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:supports_post?).returns(true)
     root_resource.expects(:accepts_post_with_media_type?).with('text/foo').returns(true)
     resource = mock_resource
-    resource.expects(:get_entity_representation).returns(mock_entity('bar', 'text/bar'))
+    resource.expects(:get).returns(mock_entity('bar', 'text/bar'))
     root_resource.expects(:post).returns(resource).once
 
     post({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
@@ -117,7 +117,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:accepts_method_with_media_type?).with('patch', 'text/foo').returns(true)
     resource = mock_resource
-    resource.expects(:get_entity_representation).returns(mock_entity('bar', 'text/bar'))
+    resource.expects(:get).returns(mock_entity('bar', 'text/bar'))
     root_resource.expects(:patch).returns(resource).once
 
     other_request_method('PATCH', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
@@ -132,7 +132,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:accepts_method_with_media_type?).with('patch', 'text/foo').returns(true)
     resource = mock_resource(nil, ['foo'])
-    resource.expects(:get_entity_representation).never
+    resource.expects(:get).never
     root_resource.expects(:patch).returns(resource).once
 
     other_request_method('PATCH', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})

@@ -40,7 +40,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_custom_error_resource
     e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found')
     CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found').returns(e).once
-    e.expects(:get_entity_representation).returns(Rack::REST::Entity.new("foo bar baz", :media_type => 'text/custom_error')).once
+    e.expects(:get).returns(Rack::REST::Entity.new("foo bar baz", :media_type => 'text/custom_error')).once
 
     root_resource.expects(:exists?).returns(false).at_least_once
 
@@ -63,7 +63,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_caught_from_resource_code
     app(Rack::REST::Resource::Error, true)
 
-    root_resource.expects(:get_entity_representation).raises(RuntimeError, 'Oi!')
+    root_resource.expects(:get).raises(RuntimeError, 'Oi!')
     get
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status
     assert_match /internal server error/i, last_response.body
@@ -72,14 +72,14 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_not_caught_from_resource_code
     app(Rack::REST::Resource::Error, false)
 
-    root_resource.expects(:get_entity_representation).raises(FooException, 'Oi!')
+    root_resource.expects(:get).raises(FooException, 'Oi!')
     assert_raise(FooException) {get}
   end
 
   def test_exception_within_error_resource_code
     app(CustomErrorResource, true)
 
-    CustomErrorResource.any_instance.expects(:get_entity_representation).raises(FooException)
+    CustomErrorResource.any_instance.expects(:get).raises(FooException)
 
     root_resource.expects(:exists?).returns(false).at_least_once
     get
@@ -89,8 +89,8 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_within_error_resource_code_after_catching_exception_from_resource_code
     app(CustomErrorResource, true)
 
-    root_resource.expects(:get_entity_representation).raises(RuntimeError)
-    CustomErrorResource.any_instance.expects(:get_entity_representation).raises(FooException)
+    root_resource.expects(:get).raises(RuntimeError)
+    CustomErrorResource.any_instance.expects(:get).raises(FooException)
 
     get
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status

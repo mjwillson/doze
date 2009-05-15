@@ -110,8 +110,9 @@ class Rack::REST::ResourceResponder < Rack::Request
     if_none_match = @request.env['HTTP_IF_NONE_MATCH']
     return unless if_match || if_none_match
 
-    entity ||= get_preferred_entity_representation or return
-    etag = entity.etag
+    representation ||= get_preferred_representation
+    return unless representation.is_a?(Rack::REST::Entity)
+    etag = representation.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
     if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     quote(etag)))) ||
@@ -152,27 +153,29 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def get_preferred_entity_representation(add_to_response=nil, ignore_unacceptable_accepts=false)
+  def get_preferred_representation(response=nil, ignore_unacceptable_accepts=false)
     # We only handle range requests when a direct GET to this resource is being made.
     # TODO: fix behaviour in combination with If-Match - should this use the etag from the full (not partial) response, or be range-sensitive?
-    range = (handle_range_request(add_to_response) if @direct_request && request_method == 'GET')
+    range = (handle_range_request(response) if @direct_request && request_method == 'GET')
 
-    s_mtype, s_lang = @resource.supports_media_type_negotiation?, @resource.supports_language_negotiation?
-    negotiator = if s_mtype || s_lang
-      # The resource supports some kind of content negotiation
-      # Add relevant headers to a response if passed:
-      add_to_response.add_header_values('Vary', s_mtype && 'Accept', s_lang && 'Accept-Language') if add_to_response
-      Rack::REST::Negotiator.new(@request, s_mtype, s_lang, ignore_unacceptable_accepts)
+    get_result = (range ? @resource.get_with_range(range) : @resource.get) or return
+    return get_result if get_result.is_a?(Rack::REST::Resource) || get_result.nil?
+
+    *representations = *get_result
+    negotiator = Rack::REST::Negotiator.new(@request, ignore_unacceptable_accepts)
+
+    if response
+      # If the available representation entities differ by media type, add a Vary: Accept. similarly for language.
+      response.add_header_values('Vary', 'Accept') if not_all_equal?(representations.map {|e| e.media_type})
+      response.add_header_values('Vary', 'Accept-Language') if not_all_equal?(representations.map {|e| e.language})
     end
 
-    entity = if negotiator && negotiator.negotiation_requested?
-      entities = range ? response.get_entity_representations_with_range(range) : @resource.get_entity_representations
-      negotiator.choose_entity(entities) or raise_error(STATUS_NOT_ACCEPTABLE)
-    else
-      range ? @resource.get_entity_representation_with_range(range) : @resource.get_entity_representation
-    end
+    negotiator.choose_entity(representations) or raise_error(STATUS_NOT_ACCEPTABLE)
+  end
 
-    entity or raise_error(STATUS_INTERNAL_SERVER_ERROR)
+  def not_all_equal?(collection)
+    first = collection.first
+    !collection.all? {|x| x == first}
   end
 
   def add_caching_headers(response)
@@ -202,20 +205,19 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   def make_representation_of_resource_response(check_precond=false)
     response = Rack::REST::Response.new
-
     add_caching_headers(response)
 
-    resource_representation = @resource.get_resource_representation
-    if resource_representation
-      response.set_redirect(resource_representation, @request)
-    else
-      entity_representation ||= get_preferred_entity_representation(response)
-
+    representation = get_preferred_representation(response)
+    case representation
+    when Rack::REST::Resource
+      raise 'Resource representation must have an identifier' unless representation.has_identifier?
+      response.set_redirect(representation, @request)
+    when Rack::REST::Entity
       # preconditions on the representation only apply to the content that would be served up by a GET
-      check_entity_preconditions(entity_representation) if check_precond
-
-      response.entity = entity_representation
+      check_entity_preconditions(representation) if check_precond
+      response.entity = representation
     end
+
     response
   end
 

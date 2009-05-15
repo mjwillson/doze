@@ -20,7 +20,7 @@ class Rack::REST::Application
     if @error_resource_class
       error_resource = @error_resource_class.new(error.http_status, error.message)
       responder = Rack::REST::ResourceResponder.new(error_resource, request)
-      response.entity = responder.get_preferred_entity_representation(nil, true)
+      response.entity = responder.get_preferred_representation(nil, true)
     else
       response.headers['Content-Type'] = 'text/plain'
       response.body = error.message

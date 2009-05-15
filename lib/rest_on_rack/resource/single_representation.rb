@@ -3,7 +3,7 @@ module Rack::REST::Resource::SingleRepresentation
   def language; end
   def data; ''; end
 
-  def get_entity_representation
+  def get
     Rack::REST::Entity.new(:media_type => media_type, :language => language) {data}
   end
 end
