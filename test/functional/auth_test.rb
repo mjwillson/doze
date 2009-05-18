@@ -53,13 +53,13 @@ class AuthTest < Test::Unit::TestCase
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
-  def test_put_to_missing_subresource_auth
-    root_resource.expects(:supports_put_to_missing_subresource?).returns(true).once
-    root_resource.expects(:accepts_put_to_missing_subresource_with_media_type?).with(['blah'], 'text/foo').returns(true)
+  def test_put_on_missing_subresource_auth
+    root_resource.expects(:supports_put_on_subresource?).returns(true).once
     auths = sequence('auths')
     root_resource.expects(:authorize).with('username', 'resolve_subresource').returns(true).in_sequence(auths)
-    root_resource.expects(:authorize).with('username', 'put_to_missing_subresource').returns(false).in_sequence(auths)
-    root_resource.expects(:put_to_missing_subresource).never
+    root_resource.expects(:authorize).with('username', 'put_on_subresource').returns(false).in_sequence(auths)
+    root_resource.expects(:accepts_put_on_subresource_with_media_type?).never
+    root_resource.expects(:put_on_subresource).never
 
     put('/blah', {}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo', 'REMOTE_USER' => 'username'})
     assert_equal STATUS_FORBIDDEN, last_response.status
@@ -74,7 +74,7 @@ class AuthTest < Test::Unit::TestCase
   end
 
   def test_other_method_auth
-    root_resource.expects(:recognizes_method?).with('patch').returns(true)
+    root_resource.expects(:recognized_methods).returns(['get','patch'])
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:authorize).with('username', 'patch').returns(false).once
     root_resource.expects(:patch).never

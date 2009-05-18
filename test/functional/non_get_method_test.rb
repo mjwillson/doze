@@ -99,7 +99,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_other_method_with_no_response
     # PATCH used as an example here
-    root_resource.expects(:recognizes_method?).with('patch').returns(true)
+    root_resource.expects(:recognized_methods).returns(['get','post','put','delete','patch'])
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:accepts_method_with_media_type?).with('patch', 'text/foo').returns(true)
     root_resource.expects(:patch).with do |value|
@@ -113,7 +113,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_other_method_with_anonymous_resource_response
     # PATCH used as an example here
-    root_resource.expects(:recognizes_method?).with('patch').returns(true)
+    root_resource.expects(:recognized_methods).returns(['get','post','put','delete','patch'])
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:accepts_method_with_media_type?).with('patch', 'text/foo').returns(true)
     resource = mock_resource
@@ -128,7 +128,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_other_method_with_resource_response
     # PATCH used as an example here
-    root_resource.expects(:recognizes_method?).with('patch').returns(true)
+    root_resource.expects(:recognized_methods).returns(['get','post','put','delete','patch'])
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:accepts_method_with_media_type?).with('patch', 'text/foo').returns(true)
     resource = mock_resource(nil, ['foo'])

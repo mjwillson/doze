@@ -13,12 +13,13 @@ require 'rest_on_rack/resource/error'
 class Rack::REST::ResourceResponder < Rack::Request
   include Rack::REST::Utils
 
-  attr_reader :root_resource, :request
+  attr_reader :resource, :request, :direct_request, :parent_responder
 
-  def initialize(resource, request, identifier_components=nil)
+  def initialize(resource, request, identifier_components=nil, parent_responder=nil)
     @resource = resource
     @request = request
     @identifier_components = identifier_components
+    @parent_responder = parent_responder
     @direct_request = (identifier_components == [])
   end
 
@@ -26,48 +27,106 @@ class Rack::REST::ResourceResponder < Rack::Request
     raise Rack::REST::Error.new(status, message, headers)
   end
 
-  def response_to_direct_or_subresource_request
-    # First of all we determine whether this is a direct request for this resource, a request on a subresource which we're able to resolve,
-    # or a request on a missing subresource.
-    if @direct_request
-      respond_to_direct_request
-    elsif @identifier_components
-      check_authorization('resolve_subresource')
-      subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components)
 
+
+  # Resource resolution and basic method dispatch
+
+  def most_resolved_responder
+    if @direct_request
+      self
+    elsif @identifier_components
+      check_authorization('resolve_subresource', false)
+      subresource, remaining_identifier_components = @resource.resolve_subresource(@identifier_components)
       if subresource
-        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components || []).response_to_direct_or_subresource_request
+        Rack::REST::ResourceResponder.new(subresource, @request, remaining_identifier_components || [], self).most_resolved_responder
       else
-        respond_to_request_on_missing_subresource
+        self
       end
-    else
-      raise 'identifier_components required for Rack::REST::ResourceResponder#response_to_direct_or_subresource_request'
     end
   end
-  alias :respond :response_to_direct_or_subresource_request
 
-  # some general request and response helpers
-
-  def check_method_support(resource_method, media_type=nil)
-    raise_error(STATUS_NOT_IMPLEMENTED) unless @resource.recognizes_method?(resource_method)
-    raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header(@resource.supported_methods)) unless @resource.supports_method?(resource_method)
-    raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) if media_type && !@resource.accepts_method_with_media_type?(resource_method, media_type)
+  def most_resolved_responder_supporting_method
+    responder = most_resolved = most_resolved_responder
+    support = support_at_most_resolved = responder.supports_method?
+    until support || !responder
+      responder = responder.parent_responder
+      support = responder.supports_method? if responder
+    end
+    responder or case support_at_most_resolved
+    when false then raise_error(STATUS_NOT_IMPLEMENTED)
+    when nil
+      if most_resolved.direct_request || request_method == 'put'
+        # the resource you were trying to do something to exists, but this method isn't supported on it,
+        # or, creation (put) is not supported for the new resource you were trying to create
+        raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header)
+      else
+        # the resource you were trying to do something to, doesn't exist
+        raise_error(STATUS_NOT_FOUND)
+      end
+    end
   end
 
-  def allow_header(resource_methods)
-    methods = resource_methods.map {|method| method.upcase}
+  def respond
+    if request_method == 'options'
+      Rack::REST::Response.new(STATUS_OK, allow_header)
+    else
+      most_resolved_responder_supporting_method.respond_to_supported_method
+    end
+  end
+
+
+
+  # Method support
+
+  # false = not even recognised, nil = recognised but not supported, true = supported
+  def supports_method?(method=request_method)
+    return false unless @resource.recognized_methods.include?(method)
+    if @direct_request
+      @resource.supports_method?(method)
+    else
+      # For now, get may only be supported as a direct request.
+      method != 'get' && @resource.supports_method_on_subresource?(@identifier_components, method)
+    end or nil
+  end
+
+  def supported_methods
+    responder = most_resolved_responder
+    methods = []
+    while responder
+      methods |= responder.directly_supported_methods
+      responder = responder.parent_responder
+    end
+    methods
+  end
+
+  def directly_supported_methods
+    @resource.recognized_methods.select {|m| supports_method?(m)}
+  end
+
+  def allow_header
+    methods = supported_methods.map {|method| method.upcase}
     # We support OPTIONS for free, and HEAD for free if GET is supported
     methods << 'HEAD' if methods.include?('GET')
     methods << 'OPTIONS'
     {'Allow' => methods.join(', ')}
   end
 
+
+
+  # Request helpers:
+
   # We allow other request methods to be tunnelled over POST via a couple of mechanisms:
   def request_method
     @request_method ||= begin
       method = @request.request_method
-      (@request.env['HTTP_X_HTTP_METHOD_OVERRIDE'] || @request.GET['_method'] if method == 'POST') || method
+      method = @request.env['HTTP_X_HTTP_METHOD_OVERRIDE'] || @request.GET['_method'] || method if method == 'POST'
+      @head_only = (method == 'HEAD') and method = 'GET'
+      method.downcase
     end
+  end
+
+  def head_only
+    @head_only || (request_method; @head_only)
   end
 
   def request_entity
@@ -86,7 +145,23 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def check_authorization(action)
+
+
+
+
+  # Precondition checkers
+
+  def check_request_entity_media_type(resource_method, media_type)
+    supported = if @direct_request
+      @resource.accepts_method_with_media_type?(resource_method, media_type)
+    else
+      @resource.accepts_method_on_subresource_with_media_type?(@identifier_components, resource_method, media_type)
+    end
+    raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) unless supported
+  end
+
+  def check_authorization(action, on_subresource=!@direct_request)
+    action += '_on_subresource' if on_subresource
     unless @resource.authorize(authenticated_user, action)
       raise_error(authenticated_user ?
                   STATUS_FORBIDDEN :   # this one, 403, really means 'unauthorized', ie
@@ -120,6 +195,11 @@ class Rack::REST::ResourceResponder < Rack::Request
       raise_error(STATUS_PRECONDITION_FAILED)
     end
   end
+
+
+
+
+  # Response handling
 
   def handle_range_request(add_to_response)
     supported_range_units = @resource.supported_range_units
@@ -156,7 +236,7 @@ class Rack::REST::ResourceResponder < Rack::Request
   def get_preferred_representation(response=nil, ignore_unacceptable_accepts=false)
     # We only handle range requests when a direct GET to this resource is being made.
     # TODO: fix behaviour in combination with If-Match - should this use the etag from the full (not partial) response, or be range-sensitive?
-    range = (handle_range_request(response) if @direct_request && request_method == 'GET')
+    range = (handle_range_request(response) if @direct_request && request_method == 'get')
 
     get_result = (range ? @resource.get_with_range(range) : @resource.get) or return
     return get_result if get_result.is_a?(Rack::REST::Resource) || get_result.nil?
@@ -236,117 +316,67 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def respond_to_direct_request
-    case request_method
-    # HTTP methods for which we provide special support at this layer
-    when 'GET','HEAD' then get_response
-    when 'POST'       then post_response
-    when 'PUT'        then put_response
-    when 'DELETE'     then delete_response
-    when 'OPTIONS'    then options_response
-    else other_response(request_method.downcase) # POST gets lumped together with any other non-standard method in terms of treatment at this layer
-    end
-  end
+  def respond_to_supported_method
+    check_authorization(request_method)
 
-  def options_response(resource_methods=@resource.supported_methods)
-    Rack::REST::Response.new(STATUS_OK, allow_header(resource_methods))
-  end
+    exists = @direct_request && @resource.exists?
 
-  def get_response(head_only=false)
-    raise_error(STATUS_NOT_FOUND) unless @resource.exists?
-    check_method_support('get')
-    check_authorization('get')
-    check_resource_preconditions(STATUS_NOT_MODIFIED)
+    if request_method == 'get'
+      raise_error(STATUS_NOT_FOUND) unless exists
+      check_resource_preconditions(STATUS_NOT_MODIFIED)
+      response = make_representation_of_resource_response(true)
+      response.head_only = head_only
+      response
+    else
+      entity = request_entity
+      check_request_entity_media_type(request_method, entity.media_type) if entity
 
-    response = make_representation_of_resource_response(true)
-    response.head_only = true if request_method == 'HEAD'
-    response
-  end
-
-  def put_response
-    entity = request_entity
-    check_method_support('put', entity && entity.media_type)
-    check_authorization('put')
-    existed_before = @resource.exists?
-    if existed_before && @resource.supports_get?
-      check_resource_preconditions
-      check_entity_preconditions
-    end
-    @resource.put(entity)
-    Rack::REST::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
-  end
-
-  def delete_response
-    check_method_support('delete')
-    check_authorization('delete')
-    if @resource.exists?
-      if @resource.supports_get?
+      if exists && @resource.supports_get?
         check_resource_preconditions
         check_entity_preconditions
       end
-      @resource.delete
+
+      perform_non_get_action(entity, exists)
     end
-    Rack::REST::Response.new_empty
   end
 
-  def post_response
-    entity = request_entity
-    check_method_support('post', entity && entity.media_type)
-    check_authorization('post')
-
-    if @resource.supports_get?
-      check_resource_preconditions
-      check_entity_preconditions
-    end
-
-    result = @resource.post(entity)
-    # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
-    # this is the only respect in which it differs from the general other_method treatment
-    make_general_result_response(result, STATUS_CREATED)
-  end
-
-  def other_response(resource_method)
-    entity = request_entity
-    check_method_support(resource_method, entity && entity.media_type)
-    check_authorization(resource_method)
-    check_resource_preconditions
-    check_entity_preconditions
-
-    result = @resource.other_method(resource_method, entity)
-    # 303 See Other is the default interpretation of a new resource with an identifier resulting from a post.
-    # TODO: maybe a way to indicate the semantics of the operation that resulted so that other status codes can be returned
-    make_general_result_response(result, STATUS_SEE_OTHER)
-  end
-
-
-  # Requests for missing subresources.
-  # For now we only support PUT and OPTIONS.
-  # As an alternative, one can of course always resolve a stub subresource with exists? == false
-
-  def respond_to_request_on_missing_subresource
+  def perform_non_get_action(entity, existed_before)
     case request_method
-    when 'PUT'      then put_to_missing_subresource_response
-    when 'OPTIONS'  then options_response(supported_methods_on_missing_subresource)
-    end or raise_error(STATUS_NOT_FOUND)
-  end
+    when 'post'
+      result = if @direct_request
+        @resource.post(entity)
+      else
+        @resource.post_on_subresource(@identifier_components, entity)
+      end
+      # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
+      # this is the only respect in which it differs from the general other_method treatment
+      make_general_result_response(result, STATUS_CREATED)
 
-  def supported_methods_on_missing_subresource
-    @resource.supports_put_to_missing_subresource?(@identifier_components) ? ['put'] : []
-  end
+    when 'put'
+      if @direct_request
+        @resource.put(entity)
+      else
+        @resource.put_on_subresource(@identifier_components, entity)
+      end
+      Rack::REST::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
 
-  def put_to_missing_subresource_response
-    entity = request_entity
+    when 'delete'
+      if @direct_request
+        @resource.delete if existed_before
+      else
+        @resource.delete_on_subresource(@identifier_components)
+      end
+      Rack::REST::Response.new_empty
 
-    unless @resource.supports_put_to_missing_subresource?(@identifier_components)
-      raise_error(STATUS_METHOD_NOT_ALLOWED, nil, allow_header([]))
+    else
+      result = if @direct_request
+        @resource.other_method(request_method, entity)
+      else
+        @resource.other_method_on_subresource(@identifier_components, request_method, entity)
+      end
+      # 303 See Other is the default interpretation of a new resource with an identifier resulting from some other method.
+      # TODO: maybe a way to indicate the semantics of the operation that resulted so that other status codes can be returned
+      make_general_result_response(result, STATUS_SEE_OTHER)
     end
-
-    if entity && entity.media_type && !@resource.accepts_put_to_missing_subresource_with_media_type?(@identifier_components, entity.media_type)
-      raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE)
-    end
-
-    check_authorization('put_to_missing_subresource')
-    @resource.put_to_missing_subresource(@identifier_components, entity)
-    Rack::REST::Response.new_empty(STATUS_CREATED)
   end
 end

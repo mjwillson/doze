@@ -62,7 +62,11 @@ module Rack::REST::Resource
   # If you deny an action by the unauthenticated user, this will be taken as a requirement for authentication. So eg if authentication is all you require,
   # you could just return !user.nil?
   #
-  # action will be one of: get, resolve_subresource, put, put_to_missing_subresource, post, delete, or some other method name which you recognizes_method? and supports_method?
+  # action will be one of:
+  #  * resolve_subresource
+  #  * get, put, post, delete, or some other recognized_method where we supports_method?
+  #  * put_on_subresource, post_on_subresource, delete_on_subresource, or some other recognized_method where we supports_method_on_subresource?
+  #
   # user will be the authenticated user, or nil if there is no authenticated user. The exact nature of the user object will depend on the middleware used to do authentication.
   #
   # the reason resolve_subresource is included alongside the request methods as an action for authorization is so that you can easily implement simple blanket
@@ -77,20 +81,17 @@ module Rack::REST::Resource
   # and to have the existence test run on the instance.
   #
   # Or you can use it if you want to support certain non-get methods on a resource, but appear non-existent in response to get requests.
-  # (implementing put_to_missing_subresource on the parent resource is available too as an alternative for implementing put on a non-existent resource)
+  # (implementing put_on_subresource on the parent resource is available too as an alternative for implementing put on a non-existent resource)
   def exists?
     true
   end
 
-  STANDARD_RESTFUL_METHODS = ['get', 'post', 'put', 'delete']
-  # for every method here there should be a supports_foo?
-
   # Recognizing a method just means, 'we know what you mean here'. Whether this resource supports_method? it is another question, which
-  # will only be asked if the method is recognized.
+  # will only be asked only for recognized methods.
   # This is to distinguish 'method not implemented' from 'method not allowed'. Also ensures that supports_method doesn't get passed
   # anything stupid and/or dangerous from user input.
-  def recognizes_method?(method)
-    STANDARD_RESTFUL_METHODS.include?(method)
+  def recognized_methods
+    ['get', 'post', 'put', 'delete']
   end
 
   # A convenience which some libraries add to Kernel
@@ -106,21 +107,6 @@ module Rack::REST::Resource
     true
   end
 
-  def supports_put?
-    false
-  end
-
-  def supports_post?
-    false
-  end
-
-  def supports_delete?
-    false
-  end
-
-  def supported_methods
-    STANDARD_RESTFUL_METHODS.select {|method| supports_method?(method)}
-  end
 
   # Called to obtain one or more representations of the resource.
   #
@@ -168,7 +154,7 @@ module Rack::REST::Resource
 
   # Intended to be called in order to:
   #  * Allocate an identifier for a new subresource, and create this subresource, based on the representation entity if given.
-  #    (Note: use put_to_missing_subresource instead if you know the desired identifier)
+  #    (Note: use put_on_subresource instead if you know the desired identifier)
   #  * Create a new interal resource which isn't exposed to the caller (eg, log some data)
   #
   # May also be used for legacy reasons for some other wider purposes:
@@ -214,8 +200,7 @@ module Rack::REST::Resource
   # Return options are the same as for post, as are their interpretations, with the exception that a resource returned will not be assumed to be newly-created.
   # (we're taking the stance that you should be using post or put for creation of new resources).
   #
-  # By default it'll call a ruby method of the same name to call, as already happens for post/put/delete. This is safe as recognizes_method? and supports_method?
-  # will have been checked first.
+  # By default it'll call a ruby method of the same name to call, as already happens for post/put/delete.
   def other_method(method_name, entity=nil)
     try(method_name, entity)
   end
@@ -224,13 +209,6 @@ module Rack::REST::Resource
     try("accepts_#{resource_method}_with_media_type?", media_type)
   end
 
-  def accepts_put_with_media_type?(media_type)
-    false
-  end
-
-  def accepts_post_with_media_type?(media_type)
-    false
-  end
 
 
 
@@ -266,29 +244,42 @@ module Rack::REST::Resource
 
 
 
-  # Put to missing subresource
-
-  # Equivalent to supports_put?, but is given child_identifier_components for the proposed subresource
-  def supports_put_to_missing_subresource?(child_identifier_components)
-    false
-  end
-
-  # Equivalent to accepts_put_with_media_type?, but is given child_identifier_components for the proposed subresource
-  def accepts_put_to_missing_subresource_with_media_type?(child_identifier_components, media_type)
-    false
-  end
-
-  # Called to create a new subresource with the identifier given by child_identifier_components ontop of the identifier_components of self.
-  # The new resource created must have the given entity as one of its representations (or a resource-level semantic equivalent).
-  # Entity will be a new entity representation whose media_type has been okayed by accepts_put_to_missing_subresource_with_media_type?
+  # "method on subresource" hooks for parent resources
   #
-  # Subsequent to a successful put_to_missing_subresource, the following should hold:
-  #   * resolve_subresource(child_identifier_components) should return the new subresource
+  # Why is this functionality offered? main use cases:
+  # * a put to a missing subresource
+  #    - because the parent needs the ability to handle this when the subresource doesn't yet exist
+  # * a put which replaces an existing child resource
+  #    - because sometimes it'll be more convenient for the parent resource to handle replacing its child, rather
+  #      than the child 'replacing' itself.
+  # * a delete which removes a child resource
+  #    - again sometimes it'll be more convenient for the parent to handle removing a child, than for the child to remove
+  #      itself
   #
-  # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
-  def put_to_missing_subresource(child_identifier_components, entity)
-    nil
+  # How this works: first of all resolve_subresource is used to resolve the identifier as far as possible.
+  # If remaining identifier components are left over, these are interpreted as referring to a missing subresource.
+  # Each parent resource in turn is then given an opportunity to support the method on a subresource, and passed
+  # the remaining identifier components required at that level to refer to the child subresource in question.
+  #
+  # If the resource is resolved fully but doesn't directly support the method in question, again each parent
+  # resource in turn is then given an opportunity to support the method on a subresource, and passed
+  # the remaining identifier components required at that level to refer to the child subresource in question.
+  #
+  # Only non-get methods may be supported on a subresource.
+  # If you support a method on a subresource, you need to define a corresponding #{method}_on_subresource method, eg:
+  # * put_on_subresource(child_identifier_components, entity)
+  # * post_on_subresource(child_identifier_components, entity)
+  # * delete_on_subresource(child_identifier_components)
+  def supports_method_on_subresource?(child_identifier_components, method)
+    try("supports_#{method}_on_subresource?", child_identifier_components)
   end
+
+  def accepts_method_on_subresource_with_media_type?(child_identifier_components, method, media_type)
+    try("accepts_#{method}_on_subresource_with_media_type?", child_identifier_components, media_type)
+  end
+
+
+
 
 
   # Resource-level Range requests
