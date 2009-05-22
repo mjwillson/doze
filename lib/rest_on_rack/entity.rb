@@ -25,4 +25,24 @@ class Rack::REST::Entity
   def etag
     Digest::MD5.hexdigest(data)
   end
+
+  # Dispatch to special media-type-specific entity subclasses
+
+  @@media_type_subclasses = Hash.new(self)
+
+  def self.media_type_subclasses
+    @media_type_subclasses ||= @@media_type_subclasses.values.select {|klass| klass < self}
+  end
+
+  def self.register_for_media_type(media_type)
+    @@media_type_subclasses[media_type] = self
+    @media_type = media_type
+  end
+
+  def self.new(data=nil, metadata=nil, &block)
+    klass = @@media_type_subclasses[metadata && metadata[:media_type]]
+    instance = klass.allocate
+    instance.send(:initialize, data, metadata, &block)
+    instance
+  end
 end

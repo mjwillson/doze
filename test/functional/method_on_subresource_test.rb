@@ -10,7 +10,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
 
   def test_put_to_missing_subresource_with_unacceptable_media_type
     root_resource.expects(:supports_put_on_subresource?).returns(true).once
-    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], 'text/foo').returns(false)
+    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], instance_of(Rack::REST::Entity)).returns(false)
     root_resource.expects(:put_on_subresource).never
     put('/blah', {}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo'})
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
@@ -18,7 +18,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
 
   def test_put_to_missing_subresource
     root_resource.expects(:supports_put_on_subresource?).returns(true).once
-    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], 'text/foo').returns(true)
+    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], instance_of(Rack::REST::Entity)).returns(true)
     root_resource.expects(:put_on_subresource).with do |id_components, value|
       id_components == ['blah'] and value.is_a?(Rack::REST::Entity) and
       value.data == 'foo' and value.media_type == 'text/foo' and value.encoding == 'foobar'
@@ -42,7 +42,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
     root_resource.expects(:subresource).with('blah').returns(child).once
 
     root_resource.expects(:supports_put_on_subresource?).with(['blah']).returns(true).once
-    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], 'text/foo').returns(true)
+    root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], instance_of(Rack::REST::Entity)).returns(true)
     root_resource.expects(:put_on_subresource).with(['blah'], instance_of(Rack::REST::Entity)).returns(nil).once
 
     put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})

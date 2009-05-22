@@ -151,11 +151,11 @@ class Rack::REST::ResourceResponder < Rack::Request
 
   # Precondition checkers
 
-  def check_request_entity_media_type(resource_method, media_type)
+  def check_request_entity_media_type(resource_method, entity)
     supported = if @direct_request
-      @resource.accepts_method_with_media_type?(resource_method, media_type)
+      @resource.accepts_method_with_media_type?(resource_method, entity)
     else
-      @resource.accepts_method_on_subresource_with_media_type?(@identifier_components, resource_method, media_type)
+      @resource.accepts_method_on_subresource_with_media_type?(@identifier_components, resource_method, entity)
     end
     raise_error(STATUS_UNSUPPORTED_MEDIA_TYPE) unless supported
   end
@@ -329,7 +329,7 @@ class Rack::REST::ResourceResponder < Rack::Request
       response
     else
       entity = request_entity
-      check_request_entity_media_type(request_method, entity.media_type) if entity
+      check_request_entity_media_type(request_method, entity) if entity
 
       if exists && @resource.supports_get?
         check_resource_preconditions

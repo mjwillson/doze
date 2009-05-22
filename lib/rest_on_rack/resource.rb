@@ -205,8 +205,10 @@ module Rack::REST::Resource
     try(method_name, entity)
   end
 
-  def accepts_method_with_media_type?(resource_method, media_type)
-    try("accepts_#{resource_method}_with_media_type?", media_type)
+  # Called to determine whether the request entity is of a suitable media type for the method in question (eg for a put or a post).
+  # The entity itself is passed in. If you return false, the method will never be called; if true then the method may be called with the entity.
+  def accepts_method_with_media_type?(resource_method, entity)
+    try("accepts_#{resource_method}_with_media_type?", entity)
   end
 
 
@@ -274,8 +276,8 @@ module Rack::REST::Resource
     try("supports_#{method}_on_subresource?", child_identifier_components)
   end
 
-  def accepts_method_on_subresource_with_media_type?(child_identifier_components, method, media_type)
-    try("accepts_#{method}_on_subresource_with_media_type?", child_identifier_components, media_type)
+  def accepts_method_on_subresource_with_media_type?(child_identifier_components, method, entity)
+    try("accepts_#{method}_on_subresource_with_media_type?", child_identifier_components, entity)
   end
 
 
