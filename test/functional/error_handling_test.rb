@@ -23,16 +23,16 @@ class ErrorHandlingTest < Test::Unit::TestCase
 
   def test_default_error_resource_negotiation
     root_resource.expects(:exists?).returns(false).at_least_once
-    get({}, {'HTTP_ACCEPT' => 'application/json'})
+    get('HTTP_ACCEPT' => 'application/json')
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_equal 'application/json', last_response.media_type
 
-    get({}, {'HTTP_ACCEPT' => 'application/yaml'})
+    get('HTTP_ACCEPT' => 'application/yaml')
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_equal 'application/yaml', last_response.media_type
 
     # Failure of negotiation should be ignored for an error resource, not result in a STATUS_NOT_ACCEPTABLE
-    get({}, {'HTTP_ACCEPT' => 'application/bollocks'})
+    get('HTTP_ACCEPT' => 'application/bollocks')
     assert_not_equal STATUS_NOT_ACCEPTABLE, last_response.status
     assert_match /not found/i, last_response.body
   end

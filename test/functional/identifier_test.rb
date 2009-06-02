@@ -18,7 +18,7 @@ class IdentifierTest < Test::Unit::TestCase
 
   def test_root_resource_identifier_with_script_name
     root_resource.expects(:resolve_subresource).with(['boz']).once
-    get('/boz', {}, {'SCRIPT_NAME' => '/foo%20bar/baz'})
+    get('/boz', 'SCRIPT_NAME' => '/foo%20bar/baz')
     assert_equal ['foo bar', 'baz'], root_resource.identifier_components
   end
 

@@ -49,7 +49,7 @@ class MethodSupportTest < Test::Unit::TestCase
     root_resource.expects(:supports_foo?).returns(true).once
     root_resource.expects(:other_method).once
     root_resource.expects(:post).never
-    post({}, {'HTTP_X_HTTP_METHOD_OVERRIDE' => 'FOO'})
+    post('HTTP_X_HTTP_METHOD_OVERRIDE' => 'FOO')
   end
 
   def test_method_tunnelling2

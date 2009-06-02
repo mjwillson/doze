@@ -14,12 +14,12 @@ class SerializableTest < Test::Unit::TestCase
   def test_get_serialized
     root_resource.expects(:get_data).returns(@ruby_data).at_least_once
 
-    get({}, 'HTTP_ACCEPT' => 'application/json')
+    get('HTTP_ACCEPT' => 'application/json')
     assert_equal STATUS_OK, last_response.status
     assert_equal @ruby_data.to_json, last_response.body
     assert_equal 'application/json', last_response.media_type
 
-    get({}, 'HTTP_ACCEPT' => 'application/yaml')
+    get('HTTP_ACCEPT' => 'application/yaml')
     assert_equal STATUS_OK, last_response.status
     assert_equal @ruby_data.to_yaml, last_response.body
     assert_equal 'application/yaml', last_response.media_type

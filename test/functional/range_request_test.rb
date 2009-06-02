@@ -9,7 +9,7 @@ class RangeRequestTest < Test::Unit::TestCase
     root_resource.expects(:range_length).never
     root_resource.expects(:get_with_range).never
     root_resource.expects(:get).returns(mock_entity('foo'))
-    get({}, {'HTTP_RANGE' => 'items=0-10'})
+    get('HTTP_RANGE' => 'items=0-10')
     assert_equal STATUS_OK, last_response.status
     assert_equal 'foo', last_response.body
   end
@@ -22,7 +22,7 @@ class RangeRequestTest < Test::Unit::TestCase
     end.returns(mock_entity('[2,3]'))
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=2-3'})
+    get('HTTP_RANGE' => 'items=2-3')
     assert_equal STATUS_PARTIAL_CONTENT, last_response.status
     assert_equal '[2,3]', last_response.body
     assert_response_header 'Content-Range', 'items 2-3/10'
@@ -37,7 +37,7 @@ class RangeRequestTest < Test::Unit::TestCase
     root_resource.expects(:get_with_range).never
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=2-3'})
+    get('HTTP_RANGE' => 'items=2-3')
     assert_equal STATUS_BAD_REQUEST, last_response.status
   end
 
@@ -47,7 +47,7 @@ class RangeRequestTest < Test::Unit::TestCase
     root_resource.expects(:get_with_range).never
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=10-11'})
+    get('HTTP_RANGE' => 'items=10-11')
     assert_equal STATUS_REQUESTED_RANGE_NOT_SATISFIABLE, last_response.status
     assert_response_header 'Content-Range', 'items */10'
   end
@@ -60,7 +60,7 @@ class RangeRequestTest < Test::Unit::TestCase
     end.returns(mock_entity('[5,6,7,8,9]'))
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=5-14'})
+    get('HTTP_RANGE' => 'items=5-14')
     assert_equal STATUS_PARTIAL_CONTENT, last_response.status
     assert_response_header 'Content-Range', 'items 5-9/10'
   end
@@ -78,7 +78,7 @@ class RangeRequestTest < Test::Unit::TestCase
 
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=5-14'})
+    get('HTTP_RANGE' => 'items=5-14')
     assert_equal STATUS_PARTIAL_CONTENT, last_response.status
     assert_response_header 'Content-Range', 'items 5-8/*'
   end
@@ -93,7 +93,7 @@ class RangeRequestTest < Test::Unit::TestCase
     root_resource.expects(:get_with_range).never
     root_resource.expects(:get).never
 
-    get({}, {'HTTP_RANGE' => 'items=5-14'})
+    get('HTTP_RANGE' => 'items=5-14')
     assert_equal STATUS_REQUESTED_RANGE_NOT_SATISFIABLE, last_response.status
     assert_response_header 'Content-Range', 'items */*'
   end

@@ -24,30 +24,34 @@ module Rack::REST::TestCase
     @root_resource ||= Rack::REST::MockResource.new(nil, [])
   end
 
-  def get(*p, &b)
-    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  def get(path='/', env={}, &b)
+    path, env = '/', path if path.is_a?(Hash)
+    super(path, {}, env, &b)
   end
 
-  def put(*p, &b)
-    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  def put(path='/', env={}, &b)
+    path, env = '/', path if path.is_a?(Hash)
+    super(path, {}, env, &b)
   end
 
-  def post(*p, &b)
-    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  def post(path='/', env={}, &b)
+    path, env = '/', path if path.is_a?(Hash)
+    super(path, {}, env, &b)
   end
 
-  def delete(*p, &b)
-    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  def delete(path='/', env={}, &b)
+    path, env = '/', path if path.is_a?(Hash)
+    super(path, {}, env, &b)
   end
 
-  def head(*p, &b)
-    p.unshift('/') unless p.first.is_a?(String); super(*p, &b)
+  def head(path='/', env={}, &b)
+    path, env = '/', path if path.is_a?(Hash)
+    super(path, {}, env, &b)
   end
 
-  def other_request_method(method, *p, &block)
-    p.unshift('/') unless p.first.is_a?(String)
-    uri, params, env = *p
-    request(uri, (env || {}).merge(:method => method, :params => params || {}), &block)
+  def other_request_method(method, path='/', env={}, &block)
+    path, env = '/', path if path.is_a?(Hash)
+    request(path, env.merge(:method => method, :params => {}), &block)
   end
 
   def mock_entity(data, media_type='text/html', language=nil)

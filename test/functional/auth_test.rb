@@ -11,13 +11,13 @@ class AuthTest < Test::Unit::TestCase
 
   def test_deny_authenticated_user
     root_resource.expects(:authorize).with('username', 'get').returns(false).once
-    get({}, {'REMOTE_USER' => 'username'})
+    get('REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
   def test_allow_authenticated_user
     root_resource.expects(:authorize).with('username', 'get').returns(true).once
-    get({}, {'REMOTE_USER' => 'username'})
+    get('REMOTE_USER' => 'username')
     assert_equal STATUS_OK, last_response.status
   end
 
@@ -26,14 +26,14 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:authorize).with('username', 'resolve_subresource').returns(true).once
     root_resource.expects(:subresource).with('foo').returns(sub).once
     sub.expects(:authorize).with('username', 'get').returns(true).once
-    get('/foo', {}, {'REMOTE_USER' => 'username'})
+    get('/foo', 'REMOTE_USER' => 'username')
     assert_equal STATUS_OK, last_response.status
   end
 
   def test_resolve_subresource_auth_failure
     root_resource.expects(:authorize).with('username', 'resolve_subresource').returns(false).once
     root_resource.expects(:subresource).never
-    get('/foo', {}, {'REMOTE_USER' => 'username'})
+    get('/foo', 'REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
@@ -41,7 +41,7 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:supports_post?).returns(true)
     root_resource.expects(:authorize).with('username', 'post').returns(false).once
     root_resource.expects(:post).never
-    post({}, {'REMOTE_USER' => 'username'})
+    post('REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
@@ -49,7 +49,7 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:supports_put?).returns(true)
     root_resource.expects(:authorize).with('username', 'put').returns(false).once
     root_resource.expects(:put).never
-    put({}, {'REMOTE_USER' => 'username'})
+    put('REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
@@ -61,7 +61,7 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:accepts_put_on_subresource_with_media_type?).never
     root_resource.expects(:put_on_subresource).never
 
-    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo', 'REMOTE_USER' => 'username'})
+    put('/blah', 'CONTENT_TYPE' => 'text/foo', :input => 'foo', 'REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
@@ -69,7 +69,7 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:supports_delete?).returns(true)
     root_resource.expects(:authorize).with('username', 'delete').returns(false).once
     root_resource.expects(:delete).never
-    delete({}, {'REMOTE_USER' => 'username'})
+    delete('REMOTE_USER' => 'username')
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 
@@ -78,7 +78,7 @@ class AuthTest < Test::Unit::TestCase
     root_resource.expects(:supports_patch?).returns(true)
     root_resource.expects(:authorize).with('username', 'patch').returns(false).once
     root_resource.expects(:patch).never
-    other_request_method('PATCH', {}, {'REMOTE_USER' => 'username'})
+    other_request_method('PATCH', {'REMOTE_USER' => 'username'})
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
 end

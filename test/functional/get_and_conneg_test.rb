@@ -62,37 +62,37 @@ class GetAndConnegTest < Test::Unit::TestCase
     @entities[0].expects(:data).returns('<foo>fdgfdgfd</foo>').at_least_once
     @entities[1].expects(:data).never
     @entities[2].expects(:data).never
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT' => 'text/html'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'text/html').status
   end
 
   # todo break this up a bit
   def test_get_with_media_type_negotiation_and_various_accept
     root_resource.expects(:get).returns(@entities).at_least_once
 
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT' => 'application/json'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'application/json').status
     assert_equal "{foo: 'fdgfdgfd'}", last_response.body
     assert_equal 'application/json', last_response.media_type
     assert last_response.headers['Vary'].split(/,\s*/).include?('Accept')
 
-    assert_equal STATUS_NOT_ACCEPTABLE, get({}, {'HTTP_ACCEPT' => '*/*; q=0'}).status
-    assert_equal STATUS_NOT_ACCEPTABLE, get({}, {'HTTP_ACCEPT' => 'application/bollocks; q=1'}).status
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT' => 'text/*'}).status
+    assert_equal STATUS_NOT_ACCEPTABLE, get('HTTP_ACCEPT' => '*/*; q=0').status
+    assert_equal STATUS_NOT_ACCEPTABLE, get('HTTP_ACCEPT' => 'application/bollocks; q=1').status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'text/*').status
     assert_equal 'text/html', last_response.media_type
     # orders by q-value, default of 1
-    assert_equal 'application/json', get({}, {'HTTP_ACCEPT' => 'application/json, text/html; q=0.5'}).media_type
-    assert_equal 'application/json', get({}, {'HTTP_ACCEPT' => 'application/json; q=0.8, text/html; q=0.5'}).media_type
-    assert_equal 'text/html', get({}, {'HTTP_ACCEPT' => 'application/json; q=0.4, text/html; q=0.5'}).media_type
+    assert_equal 'application/json', get('HTTP_ACCEPT' => 'application/json, text/html; q=0.5').media_type
+    assert_equal 'application/json', get('HTTP_ACCEPT' => 'application/json; q=0.8, text/html; q=0.5').media_type
+    assert_equal 'text/html', get('HTTP_ACCEPT' => 'application/json; q=0.4, text/html; q=0.5').media_type
     # text/html is more specific than text/*
-    assert_equal STATUS_NOT_ACCEPTABLE, get({}, {'HTTP_ACCEPT' => 'text/*; q=0'}).status
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT' => 'text/*; q=0, text/html; q=1'}).status
+    assert_equal STATUS_NOT_ACCEPTABLE, get('HTTP_ACCEPT' => 'text/*; q=0').status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'text/*; q=0, text/html; q=1').status
 
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT' => 'text/*; q=0, */*; q=1'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'text/*; q=0, */*; q=1').status
     assert_not_equal 'text/html', last_response.media_type
 
     # doesn't just look for the highest q-value that matches, but uses the matching rules and their specificities of matching to
     # construct a media_type => q-value mapping and then uses that to prioritize what's available:
-    assert_equal 'application/yaml', get({}, {'HTTP_ACCEPT' => 'application/*; q=0.6, application/json; q=0.4'}).media_type
-    assert_equal 'application/json', get({}, {'HTTP_ACCEPT' => 'application/*; q=0.6, application/yaml; q=0.4'}).media_type
+    assert_equal 'application/yaml', get('HTTP_ACCEPT' => 'application/*; q=0.6, application/json; q=0.4').media_type
+    assert_equal 'application/json', get('HTTP_ACCEPT' => 'application/*; q=0.6, application/yaml; q=0.4').media_type
   end
 
   def test_get_with_language_variation_and_no_accept
@@ -114,7 +114,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   def test_get_with_language_negotiation_and_accept_language
     root_resource.expects(:get).returns(@entities).once
 
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-gb'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb').status
     assert_equal "<foo>Yalrightmate</foo>", last_response.body
     assert_equal 'en-gb', last_response.headers['Content-Language']
     assert last_response.headers['Vary'].split(/,\s*/).include?('Accept-Language')
@@ -123,26 +123,26 @@ class GetAndConnegTest < Test::Unit::TestCase
   def test_get_with_language_negotiation_and_various_accept_language
     root_resource.expects(:get).returns(@entities).at_least_once
 
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-gb'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb').status
     assert_equal 'en-gb', last_response.headers['Content-Language']
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en').status
     assert_equal 'en-gb', last_response.headers['Content-Language']
-    assert_equal STATUS_NOT_ACCEPTABLE, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-au'}).status
+    assert_equal STATUS_NOT_ACCEPTABLE, get('HTTP_ACCEPT_LANGUAGE' => 'en-au').status
 
-    assert_equal 'en-gb', get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-gb; q=0.7, en; q=0.5'}).headers['Content-Language']
-    assert_equal 'en-us', get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-us; q=0.7, en; q=0.5'}).headers['Content-Language']
-    assert_equal 'en-us', get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-gb; q=0.4, en; q=0.5'}).headers['Content-Language']
-    assert_equal 'en-gb', get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-us; q=0.4, en; q=0.5'}).headers['Content-Language']
+    assert_equal 'en-gb', get('HTTP_ACCEPT_LANGUAGE' => 'en-gb; q=0.7, en; q=0.5').headers['Content-Language']
+    assert_equal 'en-us', get('HTTP_ACCEPT_LANGUAGE' => 'en-us; q=0.7, en; q=0.5').headers['Content-Language']
+    assert_equal 'en-us', get('HTTP_ACCEPT_LANGUAGE' => 'en-gb; q=0.4, en; q=0.5').headers['Content-Language']
+    assert_equal 'en-gb', get('HTTP_ACCEPT_LANGUAGE' => 'en-us; q=0.4, en; q=0.5').headers['Content-Language']
 
-    assert_equal 'de', get({}, {'HTTP_ACCEPT_LANGUAGE' => 'de; q=0.9, *; q=0.5'}).headers['Content-Language']
-    assert_equal 'de', get({}, {'HTTP_ACCEPT_LANGUAGE' => '*; q=0.5, de'}).headers['Content-Language']
-    assert_equal nil, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'fr; q=0.9, *; q=0.5'}).headers['Content-Language']
+    assert_equal 'de', get('HTTP_ACCEPT_LANGUAGE' => 'de; q=0.9, *; q=0.5').headers['Content-Language']
+    assert_equal 'de', get('HTTP_ACCEPT_LANGUAGE' => '*; q=0.5, de').headers['Content-Language']
+    assert_equal nil, get('HTTP_ACCEPT_LANGUAGE' => 'fr; q=0.9, *; q=0.5').headers['Content-Language']
   end
 
   def test_get_with_both_negotiation
     root_resource.expects(:get).returns(@entities).at_least_once
 
-    assert_equal STATUS_OK, get({}, {'HTTP_ACCEPT_LANGUAGE' => 'en-gb', 'HTTP_ACCEPT' => 'text/html'}).status
+    assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb', 'HTTP_ACCEPT' => 'text/html').status
     assert_equal "<foo>Yalrightmate</foo>", last_response.body
     assert_equal 'en-gb', last_response.headers['Content-Language']
     assert last_response.headers['Vary'].split(/,\s*/).include?('Accept-Language')
@@ -150,11 +150,11 @@ class GetAndConnegTest < Test::Unit::TestCase
 
     # check that q-values are multiplied to get a combined q-value. This relies on the fact that a german yaml version doesn't exist,
     # so do we prioritise the preferred language over the preferred media type:
-    get({}, {'HTTP_ACCEPT_LANGUAGE' => 'de; q=0.9, en; q=0.1', 'HTTP_ACCEPT' => 'application/yaml; q=0.6, text/html; q=0.5'})
+    get('HTTP_ACCEPT_LANGUAGE' => 'de; q=0.9, en; q=0.1', 'HTTP_ACCEPT' => 'application/yaml; q=0.6, text/html; q=0.5')
     assert_equal 'de', last_response.headers['Content-Language']
     assert_equal 'text/html', last_response.media_type
     # or vice versa:
-    get({}, {'HTTP_ACCEPT_LANGUAGE' => 'de; q=0.6, en; q=0.5', 'HTTP_ACCEPT' => 'application/yaml; q=0.9, text/html; q=0.1'})
+    get('HTTP_ACCEPT_LANGUAGE' => 'de; q=0.6, en; q=0.5', 'HTTP_ACCEPT' => 'application/yaml; q=0.9, text/html; q=0.1')
     assert_equal 'en-gb', last_response.headers['Content-Language']
     assert_equal 'application/yaml', last_response.media_type
   end

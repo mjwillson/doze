@@ -12,7 +12,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
     root_resource.expects(:supports_put_on_subresource?).returns(true).once
     root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], instance_of(Rack::REST::Entity)).returns(false)
     root_resource.expects(:put_on_subresource).never
-    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo'})
+    put('/blah', 'CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
   end
 
@@ -24,7 +24,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
       value.data == 'foo' and value.media_type == 'text/foo' and value.encoding == 'foobar'
     end.returns(nil).once
 
-    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    put('/blah', 'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
     assert_equal STATUS_CREATED, last_response.status
   end
 
@@ -32,7 +32,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
     root_resource.expects(:supports_put_on_subresource?).with(['blah']).returns(false).at_least_once
     root_resource.expects(:accepts_put_on_subresource_with_media_type?).never
     root_resource.expects(:put_on_subresource).never
-    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    put('/blah', 'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
     assert_equal STATUS_METHOD_NOT_ALLOWED, last_response.status
   end
 
@@ -45,7 +45,7 @@ class MethodOnSubresourceTest < Test::Unit::TestCase
     root_resource.expects(:accepts_put_on_subresource_with_media_type?).with(['blah'], instance_of(Rack::REST::Entity)).returns(true)
     root_resource.expects(:put_on_subresource).with(['blah'], instance_of(Rack::REST::Entity)).returns(nil).once
 
-    put('/blah', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    put('/blah', 'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
     assert_equal STATUS_CREATED, last_response.status
   end
 

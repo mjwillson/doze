@@ -6,7 +6,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:supports_put?).returns(true)
     root_resource.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == 'text/foo'}.returns(false)
     root_resource.expects(:put).never
-    put({}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo'})
+    put('CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
   end
 
@@ -18,7 +18,7 @@ class NonGetMethodTest < Test::Unit::TestCase
       value.data == 'foo' and value.media_type == 'text/foo' and value.encoding == 'foobar'
     end.returns(nil).once
 
-    put({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    put('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
     assert_equal STATUS_NO_CONTENT, last_response.status
   end
 
@@ -28,7 +28,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == 'text/foo'}.returns(true)
     root_resource.expects(:put).returns(nil).once
 
-    put({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo'})
+    put('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
     assert_equal STATUS_CREATED, last_response.status
   end
 
@@ -36,7 +36,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:supports_post?).returns(true)
     root_resource.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == 'text/foo'}.returns(false)
     root_resource.expects(:post).never
-    post({}, {'CONTENT_TYPE' => 'text/foo', :input => 'foo'})
+    post('CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
   end
 
@@ -49,7 +49,7 @@ class NonGetMethodTest < Test::Unit::TestCase
       value.data == 'foob' and value.media_type == 'text/foo' and value.encoding == 'foobar'
     end.returns(created).once
 
-    post({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
     assert_equal STATUS_CREATED, last_response.status
     assert_response_header 'Location', 'http://example.org/identifier/components'
   end
@@ -59,7 +59,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == 'text/foo'}.returns(true)
     root_resource.expects(:post).returns(nil).once
 
-    post({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
     assert_equal STATUS_NO_CONTENT, last_response.status
   end
 
@@ -68,7 +68,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     root_resource.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == 'text/foo'}.returns(true)
     root_resource.expects(:post).returns(mock_entity('bar', 'text/bar')).once
 
-    post({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
     assert_equal STATUS_OK, last_response.status
     assert_equal 'bar', last_response.body
     assert_equal 'text/bar', last_response.media_type
@@ -81,7 +81,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     resource.expects(:get).returns(mock_entity('bar', 'text/bar'))
     root_resource.expects(:post).returns(resource).once
 
-    post({}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
     assert_equal STATUS_OK, last_response.status
     assert_equal 'bar', last_response.body
     assert_equal 'text/bar', last_response.media_type
@@ -107,7 +107,7 @@ class NonGetMethodTest < Test::Unit::TestCase
       value.data == 'foob' and value.media_type == 'text/foo' and value.encoding == 'foobar'
     end.returns(nil).once
 
-    other_request_method('PATCH', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    other_request_method('PATCH', {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
     assert_equal STATUS_NO_CONTENT, last_response.status
   end
 
@@ -120,7 +120,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     resource.expects(:get).returns(mock_entity('bar', 'text/bar'))
     root_resource.expects(:patch).returns(resource).once
 
-    other_request_method('PATCH', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    other_request_method('PATCH', {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
     assert_equal STATUS_OK, last_response.status
     assert_equal 'bar', last_response.body
     assert_equal 'text/bar', last_response.media_type
@@ -135,7 +135,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     resource.expects(:get).never
     root_resource.expects(:patch).returns(resource).once
 
-    other_request_method('PATCH', {}, {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
+    other_request_method('PATCH', {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
     assert_equal STATUS_SEE_OTHER, last_response.status
     assert_response_header 'Location', 'http://example.org/foo'
     assert last_response.body.empty?
