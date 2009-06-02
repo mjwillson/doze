@@ -28,7 +28,7 @@ class MediaTypeSpecificEntitiesTest < Test::Unit::TestCase
       entity.instance_of?(Rack::REST::Entity::JSON) and entity.ruby_data == {'foo' => 'bar'}
     end.returns(nil).once
 
-    put({'CONTENT_TYPE' => 'application/json', :input => '{"foo":"bar"}'})
+    put('CONTENT_TYPE' => 'application/json', :input => '{"foo":"bar"}')
     assert_equal STATUS_NO_CONTENT, last_response.status
   end
 

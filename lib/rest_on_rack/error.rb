@@ -11,7 +11,7 @@ end
 
 # Intended to be raised at the resource level to indicate client error. Currently this is a subclass of the internally-used Rack::REST::Error class,
 # but could equally be a separate exception class intended for Resource-level use which is caught and re-raised by the internal code.
-class Rack::REST::ClientError < StandardError
+class Rack::REST::ClientError < Rack::REST::Error
   def initialize(message=nil)
     super(Rack::REST::Utils::STATUS_BAD_REQUEST, message)
   end
