@@ -1,5 +1,6 @@
 require 'rest_on_rack/entity/json'
 require 'rest_on_rack/entity/yaml'
+require 'rest_on_rack/entity/www_form_encoded'
 
 # A good example of how to do media type negotiation
 module Rack::REST::Resource::Serializable
@@ -24,5 +25,12 @@ module Rack::REST::Resource::Serializable
 
   def put(entity)
     put_data(entity.ruby_data)
+  end
+
+  def post(entity)
+    post_data(entity && entity.ruby_data)
+  end
+
+  def post_data(data)
   end
 end
