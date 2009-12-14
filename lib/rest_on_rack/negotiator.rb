@@ -12,7 +12,10 @@ class Rack::REST::Negotiator
 
     accept_language_header = request.env['HTTP_ACCEPT_LANGUAGE']
     @language_criterea = if accept_language_header
-      parse_accept_header(accept_language_header) {|range| matcher_from_language_range(range)}.sort_by {|matcher,specificity,q| -specificity}
+      parse_accept_header(accept_language_header) {|range| matcher_from_language_range(range)}.sort_by {|matcher,specificity,q| -specificity} + [[nil, 0, 0.001]]
+      # When language_criterea are given, we allow a low-specificity tiny-but-nonzero match for a language of 'nil', ie entities with no
+      # language, even though the accept header may appear to require a particular language. Because it makes no sense to apply Accept-Language
+      # criterea to resources whose representations aren't language-specific.
     else
       [[Object, 0, 1.0]]
     end
