@@ -1,6 +1,7 @@
 require 'rest_on_rack/entity/json'
 require 'rest_on_rack/entity/yaml'
 require 'rest_on_rack/entity/www_form_encoded'
+require 'rest_on_rack/entity/html'
 
 # A good example of how to do media type negotiation
 module Rack::REST::Resource::Serializable
