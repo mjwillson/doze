@@ -1,5 +1,6 @@
 require 'json'
 require 'rest_on_rack/entity/serialized'
+require 'rest_on_rack/utils'
 
 # A browser-friendly media type for use with Rack::REST::Resource::Serializable
 class Rack::REST::Entity::HTML < Rack::REST::Entity::Serialized
@@ -67,6 +68,14 @@ END
     when Array
       i=-1; items = data.map {|v| "<tr><td><span>#{i+=1}</span></td><td>#{make_html(v)}</td></tr>"}
       items.empty? ? '&nbsp;' : "<table rules='all' frame='void'>#{items.join("\n")}</table>"
+    when Rack::REST::Resource
+      id = data.identifier_components
+      if id
+        url = Rack::REST::Utils.identifier_components_to_path(id)
+        "<a href='#{url}'>#{url}</a>"
+      else
+        make_html(data.to_s)
+      end
     else
       string = data.to_s.strip
       string.empty? ? '&nbsp;' : "<span>#{Rack::Utils.escape_html(string)}</span>"
