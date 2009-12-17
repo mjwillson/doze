@@ -4,12 +4,22 @@ require 'rest_on_rack/resource_responder'
 class Rack::REST::Application
   include Rack::REST::Utils
 
-  def initialize(resource, error_resource_class=Rack::REST::Resource::Error, catch_application_errors=true)
-    @root_resource = resource
-    # Setting this to nil is useful for testing, so an exception can make a test fail via
+  attr_reader :config
+
+  DEFAULT_CONFIG = {
+    :error_resource_class => Rack::REST::Resource::Error,
+
+    # Setting this to false is useful for testing, so an exception can make a test fail via
     # the normal channels rather than having to check and parse it out of a response.
-    @error_resource_class = error_resource_class
-    @catch_application_errors = catch_application_errors
+    :catch_application_errors => true,
+
+    # useful for development
+    :expose_exception_details => true
+  }
+
+  def initialize(resource, config={})
+    @config = DEFAULT_CONFIG.merge(config)
+    @root_resource = resource
     @script_name = nil
   end
 
@@ -17,8 +27,9 @@ class Rack::REST::Application
   # The class used is configurable but defaults to Rack::REST::Resource::Error
   def error_response(error, request)
     response = Rack::REST::Response.new
-    if @error_resource_class
-      error_resource = @error_resource_class.new(error.http_status, error.message)
+    if config[:error_resource_class]
+      extras = config[:expose_exception_details] ? {:backtrace => error.backtrace} : {}
+      error_resource = config[:error_resource_class].new(error.http_status, error.message, extras)
       responder = Rack::REST::ResourceResponder.new(error_resource, request)
       response.entity = responder.get_preferred_representation(nil, true)
     else
@@ -43,14 +54,23 @@ class Rack::REST::Application
         responder.respond.finish
       rescue Rack::REST::Error => error
         error_response(error, request).finish
-      rescue
-        raise unless @catch_application_errors
-        error = Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR)
+      rescue => exception
+        raise unless config[:catch_application_errors]
+        error = if config[:expose_exception_details]
+          Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR, exception.message, {}, exception.backtrace)
+        else
+          Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR)
+        end
         error_response(error, request).finish
       end
-    rescue
-      raise unless @catch_application_errors
-      [STATUS_INTERNAL_SERVER_ERROR, {}, ['500 response via error resource failed']]
+    rescue => exception
+      raise unless config[:catch_application_errors]
+      lines = ['500 response via error resource failed']
+      if config[:expose_exception_details]
+        lines << exception.message
+        lines.push(*exception.backtrace) if exception.backtrace
+      end
+      [STATUS_INTERNAL_SERVER_ERROR, {}, [lines.join("\n")]]
     end
   end
 

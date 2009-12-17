@@ -2,7 +2,7 @@ require 'functional/base'
 
 class CustomErrorResource
   include Rack::REST::Resource
-  def initialize(status, message)
+  def initialize(status, message, extras={})
     @status = status; @message = message
   end
 end
@@ -39,12 +39,12 @@ class ErrorHandlingTest < Test::Unit::TestCase
 
   def test_custom_error_resource
     e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found')
-    CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found').returns(e).once
+    CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found', anything).returns(e).once
     e.expects(:get).returns(Rack::REST::Entity.new("foo bar baz", :media_type => 'text/custom_error')).once
 
     root_resource.expects(:exists?).returns(false).at_least_once
 
-    app(CustomErrorResource)
+    app(:error_resource_class => CustomErrorResource)
     get
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_equal 'text/custom_error', last_response.media_type
@@ -53,7 +53,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
 
   def test_error_without_error_resource
     root_resource.expects(:exists?).returns(false).at_least_once
-    app(nil)
+    app(:error_resource_class => nil)
     get
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_equal 'text/plain', last_response.media_type
@@ -61,7 +61,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_exception_caught_from_resource_code
-    app(Rack::REST::Resource::Error, true)
+    app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => true)
 
     root_resource.expects(:get).raises(RuntimeError, 'Oi!')
     get
@@ -70,14 +70,14 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_exception_not_caught_from_resource_code
-    app(Rack::REST::Resource::Error, false)
+    app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => false)
 
     root_resource.expects(:get).raises(FooException, 'Oi!')
     assert_raise(FooException) {get}
   end
 
   def test_exception_within_error_resource_code
-    app(CustomErrorResource, true)
+    app(:error_resource_class => CustomErrorResource, :catch_application_errors => true)
 
     CustomErrorResource.any_instance.expects(:get).raises(FooException)
 
@@ -87,7 +87,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_exception_within_error_resource_code_after_catching_exception_from_resource_code
-    app(CustomErrorResource, true)
+    app(:error_resource_class => CustomErrorResource, :catch_application_errors => true)
 
     root_resource.expects(:get).raises(RuntimeError)
     CustomErrorResource.any_instance.expects(:get).raises(FooException)

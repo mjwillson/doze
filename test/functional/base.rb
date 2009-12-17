@@ -14,8 +14,8 @@ end
 module Rack::REST::TestCase
   include Rack::Test::Methods
 
-  def app(error_resource=Rack::REST::Resource::Error, catch_application_errors=false)
-    @app ||= Rack::REST::Application.new(root_resource, error_resource, catch_application_errors)
+  def app(config={:catch_application_errors => false})
+    @app ||= Rack::REST::Application.new(root_resource, config)
   end
 
   attr_writer :root_resource

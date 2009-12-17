@@ -8,15 +8,16 @@ class Rack::REST::Resource::Error
 
   # Fix the ordering here so JSON is prioritized
   def supported_serialized_entity_subclasses
-    [Rack::REST::Entity::JSON, Rack::REST::Entity::YAML]
+    [Rack::REST::Entity::JSON, Rack::REST::Entity::YAML, Rack::REST::Entity::HTML]
   end
 
-  def initialize(status=Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, message=Rack::Utils::HTTP_STATUS_CODES[status])
+  def initialize(status=Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, message=Rack::Utils::HTTP_STATUS_CODES[status], extras={})
     @status = status
     @message = message
+    @extra_properties = extras
   end
 
   def get_data
-    {:status => @status, :message => @message}
+    @extra_properties.merge(:status => @status, :message => @message)
   end
 end
