@@ -170,29 +170,40 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def check_resource_preconditions(failure_status=STATUS_PRECONDITION_FAILED)
+  def resource_preconditions_fail_response
     last_modified = @resource.last_modified or return
     if_modified_since   = @request.env['HTTP_IF_MODIFIED_SINCE']
     if_unmodified_since = @request.env['HTTP_IF_UNMODIFIED_SINCE']
-    if (if_modified_since   && last_modified <= Time.httpdate(if_modified_since)) ||
-       (if_unmodified_since && last_modified >  Time.httpdate(if_unmodified_since)) then
-      raise_error(failure_status)
+
+    if (if_unmodified_since && last_modified >  Time.httpdate(if_unmodified_since))
+      Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
+    elsif (if_modified_since && last_modified <= Time.httpdate(if_modified_since))
+      if request_method == 'get'
+        Rack::REST::Response.new(STATUS_NOT_MODIFIED, 'Last-Modified' => last_modified.httpdate)
+      else
+        Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
+      end
     end
   end
 
-  def check_entity_preconditions(entity=nil)
+  def entity_preconditions_fail_response(entity=nil)
     if_match      = @request.env['HTTP_IF_MATCH']
     if_none_match = @request.env['HTTP_IF_NONE_MATCH']
     return unless if_match || if_none_match
 
-    representation ||= get_preferred_representation
-    return unless representation.is_a?(Rack::REST::Entity)
-    etag = representation.etag
+    entity ||= get_preferred_representation
+    return unless entity.is_a?(Rack::REST::Entity)
+    etag = entity.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
-    if (if_match      && if_match != '*' &&      !(etag && if_match.include?(     quote(etag)))) ||
-       (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(quote(etag))))) then
-      raise_error(STATUS_PRECONDITION_FAILED)
+    if (if_match      && if_match != '*' &&      !(etag && if_match.include?(quote(etag))))
+      Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
+    elsif (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(quote(etag)))))
+      if request_method == 'get'
+        Rack::REST::Response.new(STATUS_NOT_MODIFIED, 'Etag' => quote(etag))
+      else
+        Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
+      end
     end
   end
 
@@ -283,10 +294,8 @@ class Rack::REST::ResourceResponder < Rack::Request
     end
   end
 
-  def make_representation_of_resource_response(check_precond=false)
+  def make_representation_of_resource_response
     response = Rack::REST::Response.new
-    add_caching_headers(response)
-
     representation = get_preferred_representation(response)
     case representation
     when Rack::REST::Resource
@@ -294,10 +303,14 @@ class Rack::REST::ResourceResponder < Rack::Request
       response.set_redirect(representation, @request)
     when Rack::REST::Entity
       # preconditions on the representation only apply to the content that would be served up by a GET
-      check_entity_preconditions(representation) if check_precond
-      response.entity = representation
+      fail_response = request_method == 'get' && entity_preconditions_fail_response(representation)
+      response = fail_response || begin
+        response.entity = representation
+        response
+      end
     end
 
+    add_caching_headers(response)
     response
   end
 
@@ -323,8 +336,7 @@ class Rack::REST::ResourceResponder < Rack::Request
 
     if request_method == 'get'
       raise_error(STATUS_NOT_FOUND) unless exists
-      check_resource_preconditions(STATUS_NOT_MODIFIED)
-      response = make_representation_of_resource_response(true)
+      response = resource_preconditions_fail_response || make_representation_of_resource_response
       response.head_only = head_only
       response
     else
@@ -332,8 +344,8 @@ class Rack::REST::ResourceResponder < Rack::Request
       check_request_entity_media_type(request_method, entity) if entity
 
       if exists && @resource.supports_get?
-        check_resource_preconditions
-        check_entity_preconditions
+        fail = resource_preconditions_fail_response and return fail
+        fail = entity_preconditions_fail_response and return fail
       end
 
       perform_non_get_action(entity, exists)

@@ -18,7 +18,7 @@ class PreconditionTest < Test::Unit::TestCase
     get('HTTP_IF_UNMODIFIED_SINCE' => (@last_modified+10).httpdate)
     assert_equal STATUS_OK, last_response.status
     get('HTTP_IF_UNMODIFIED_SINCE' => (@last_modified-10).httpdate)
-    assert_equal STATUS_NOT_MODIFIED, last_response.status
+    assert_equal STATUS_PRECONDITION_FAILED, last_response.status
   end
 
   def test_status_for_non_get
@@ -61,7 +61,7 @@ class EntityPreconditionTest < Test::Unit::TestCase
 
   def test_if_none_match
     get('HTTP_IF_NONE_MATCH' => quote(@etag))
-    assert_equal STATUS_PRECONDITION_FAILED, last_response.status
+    assert_equal STATUS_NOT_MODIFIED, last_response.status
     get('HTTP_IF_NONE_MATCH' => quote("not-the-etag"))
     assert_equal STATUS_OK, last_response.status
   end
