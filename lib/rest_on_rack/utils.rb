@@ -12,15 +12,21 @@ module Rack::REST::Utils
     '/' + components.map {|component| Rack::Utils.escape(component)}.join('/')
   end
 
-  def uri(request, path='/')
-    scheme = request.scheme; port = request.port
-    url = "#{scheme}://#{request.host}"
-    url << ":#{port}" if (scheme == "https" && port != 443) || (scheme == "http" && port != 80)
-    url << path
+  def request_base_uri(request)
+    # considered adding :path => request.script_name || '/'
+    # but Addressable::URI's handling of relative URI paths isn't yet smart enough that we can use it to allow
+    # resources to be unaware of the base path at which they're deployed.
+    uri = Addressable::URI.new(
+      :scheme => request.scheme,
+      :port => request.port,
+      :host => request.host
+    )
+    uri.port = uri.normalized_port
+    uri
   end
 
-  def identifier_components_to_uri(request, components)
-    uri(request, identifier_components_to_path(components))
+  def absolute_resource_uri_based_on_request_uri(request, resource)
+    request_base_uri(request).join(resource.uri)
   end
 
   def quote(str)

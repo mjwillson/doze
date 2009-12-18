@@ -57,6 +57,9 @@ spec = Gem::Specification.new do |s|
   # s.homepage = ''
   # s.rubyforge_project = ''
 
+  s.add_dependency('rack', '~> 1.0')
+  s.add_dependency('addressable', '~> 2.1')
+
   s.has_rdoc = true
   s.extra_rdoc_files = ['README']
   s.rdoc_options << '--title' << 'REST on Rack' << '--main' << 'README' << '--line-numbers'

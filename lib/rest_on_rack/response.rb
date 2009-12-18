@@ -47,7 +47,7 @@ class Rack::REST::Response
   def set_redirect(resource, request, status=STATUS_SEE_OTHER)
     raise 'Resource specified as a representation must have identity in order to redirect to it' unless resource.has_identifier?
     @status = status
-    @headers['Location'] = identifier_components_to_uri(request, resource.identifier_components)
+    @headers['Location'] = absolute_resource_uri_based_on_request_uri(request, resource).to_s
     @body = ''
   end
 

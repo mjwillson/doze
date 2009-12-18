@@ -21,10 +21,8 @@ module Rack::REST::Resource
 
   private :initialize_resource
 
-  # identifier_components is an array of objects representing components of this object's resource identifier.
-  # This is essentially an abstraction of the notion of path components within a URI; the code exposing the resource will
-  # handle translating these to and from protocol-specific identifier format (a URI in HTTP). In particular this means you don't need to worry
-  # about encoding issues, just treat these as arbitrary strings.
+  # identifier_components is an array of objects representing components of this object's URI path.
+  # You don't need to worry about URI encoding issues, just treat these as arbitrary strings
   #
   # (In fact if you want to, you can specify an arbitrary ruby object, eg an integer, as an identifier component, but it must support to_s,
   #  and resolve_subresource must be prepared to accept the string version of it)
@@ -33,6 +31,12 @@ module Rack::REST::Resource
   # A resource has_identifier? if identifier_components are set. A resource which has_identifier? can be referred to
   def has_identifier?
     !@identifier_components.nil?
+  end
+
+  # Get an Addressable::URI object for this resource's URI. Will return a relative URI with only the path specified; you can merge or join with
+  # some base URI to get an absolute URI.
+  def uri
+    Addressable::URI.new(:path => Rack::REST::Utils.identifier_components_to_path(@identifier_components))
   end
 
   # The parent resource. Having a parent resource implies that the parent's identifier_components array is a prefix of yours, hence a hierarchy of identifiers.
