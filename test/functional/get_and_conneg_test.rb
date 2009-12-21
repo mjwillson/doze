@@ -21,7 +21,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get
-    root_resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
+    root.expects(:get).returns(mock_entity('foo', 'text/html')).once
     assert_equal STATUS_OK, get.status
     assert_equal 'foo', last_response.body
     assert_equal 'text/html', last_response.media_type
@@ -34,13 +34,13 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_not_exists_get
-    root_resource.expects(:exists?).returns(false).once
-    root_resource.expects(:get).never
+    root.expects(:exists?).returns(false).once
+    root.expects(:get).never
     assert_equal STATUS_NOT_FOUND, get.status
   end
 
   def test_get_with_media_type_variation_and_no_accept
-    root_resource.expects(:get).returns([
+    root.expects(:get).returns([
       mock_entity('<foo>fdgfdgfd</foo>', 'text/html'),
       mock_entity("{foo: 'fdgfdgfd'}", 'application/json'),
     ]).once
@@ -51,7 +51,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get_with_multiple_entities_and_no_media_type_variation
-    root_resource.expects(:get).returns([
+    root.expects(:get).returns([
       mock_entity('<foo>fdgfdgfd</foo>', 'text/html'),
       mock_entity('<foo>Yalrightmate</foo>', 'text/html')
     ]).once
@@ -60,7 +60,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_data_never_called_on_undesired_entity
-    root_resource.expects(:get).returns(@entities).once
+    root.expects(:get).returns(@entities).once
     @entities[0].expects(:data).returns('<foo>Yalrightmate</foo>').at_least_once
     @entities[1].expects(:data).never
     @entities[2].expects(:data).never
@@ -69,7 +69,7 @@ class GetAndConnegTest < Test::Unit::TestCase
 
   # todo break this up a bit
   def test_get_with_media_type_negotiation_and_various_accept
-    root_resource.expects(:get).returns(@entities).at_least_once
+    root.expects(:get).returns(@entities).at_least_once
 
     assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'application/json').status
     assert_equal "{foo: 'Yalrightmate'}", last_response.body
@@ -98,7 +98,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get_with_language_variation_and_no_accept
-    root_resource.expects(:get).returns([
+    root.expects(:get).returns([
       mock_entity('<foo>Yalrightmate</foo>', 'text/html', 'en-gb'),
       mock_entity('<foo>Wassup</foo>', 'text/html', 'en-us'),
     ]).once
@@ -112,14 +112,14 @@ class GetAndConnegTest < Test::Unit::TestCase
 
   def test_get_with_non_language_entity
     entity = mock_entity('{"1234": "5678"}', 'application/json', nil)
-    root_resource.expects(:get).returns([entity]).once
+    root.expects(:get).returns([entity]).once
     assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb').status
     assert_equal nil, last_response.headers['Content-Language']
   end
 
   def test_get_with_language_and_non_language_entity
     # no language preference is specified - should not prefer language over non-language, over other criterea
-    root_resource.expects(:get).returns([
+    root.expects(:get).returns([
       mock_entity('{"1234": "5678"}', 'application/json', 'en-gb'),
       mock_entity('<foo></foo>', 'text/html', nil)
     ]).once
@@ -128,13 +128,13 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get_with_multiple_entities_and_no_language_variation
-    root_resource.expects(:get).returns([@entities[0], @entities[1]]).once
+    root.expects(:get).returns([@entities[0], @entities[1]]).once
     assert_equal STATUS_OK, get.status
     assert !last_response.headers['Vary'].split(/,\s*/).include?('Accept-Language')
   end
 
   def test_get_with_language_negotiation_and_accept_language
-    root_resource.expects(:get).returns(@entities).once
+    root.expects(:get).returns(@entities).once
 
     assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb').status
     assert_equal "<foo>Yalrightmate</foo>", last_response.body
@@ -143,7 +143,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get_with_language_negotiation_and_various_accept_language
-    root_resource.expects(:get).returns(@entities).at_least_once
+    root.expects(:get).returns(@entities).at_least_once
 
     assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb').status
     assert_equal 'en-gb', last_response.headers['Content-Language']
@@ -161,7 +161,7 @@ class GetAndConnegTest < Test::Unit::TestCase
   end
 
   def test_get_with_both_negotiation
-    root_resource.expects(:get).returns(@entities).at_least_once
+    root.expects(:get).returns(@entities).at_least_once
 
     assert_equal STATUS_OK, get('HTTP_ACCEPT_LANGUAGE' => 'en-gb', 'HTTP_ACCEPT' => 'text/html').status
     assert_equal "<foo>Yalrightmate</foo>", last_response.body

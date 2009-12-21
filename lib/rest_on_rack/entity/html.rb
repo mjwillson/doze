@@ -68,7 +68,7 @@ END
     when Array
       i=-1; items = data.map {|v| "<tr><td><span>#{i+=1}</span></td><td>#{make_html(v)}</td></tr>"}
       items.empty? ? '&nbsp;' : "<table rules='all' frame='void'>#{items.join("\n")}</table>"
-    when Addressable::URI
+    when URI
       "<a href='#{Rack::Utils.escape_html(data)}'>#{Rack::Utils.escape_html(data)}</a>"
     else
       string = data.to_s.strip

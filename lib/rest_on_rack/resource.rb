@@ -1,64 +1,19 @@
 module Rack::REST::Resource
 
-  # You can call this within your constructor, if you want the resource to know about its parent scope and/or resource identifier (via identifier_components).
-  # You are allowed to have a resource without identifier_components in certain circumstances, although this limits how the resource can be exposed.
-  #   eg initialize_resource(users_resource, [1234])     for a subresource of a users resource, identifier would map to URI (say) /users/1234
-  #      initialize_resource(nil, ['foo', 'bar', 'baz']) for a parentless root resource with a hard-coded identifier that'd map to URI /foo/bar/baz
-  #      initialize_resource(nil, [])                    for a parentless root resource with a hard-coded identifier that'd map to URI /
-  #      initialize_resource()                           for a resource without any identifier (effectively a no-op)
-  # Where a parent is set, parent.resolve_subresource(additional_identifier_components) must return self.
-  # Where a parent is not set and identifier_components are specified, they should reflect the identifier at which the resource is (to be) deployed.
-  def initialize_resource(parent=nil, identifier_components=nil)
-    if parent
-      @parent = parent
-      @additional_identifier_components = identifier_components
-      parent_identifier_components = @parent.identifier_components
-      @identifier_components = parent_identifier_components + identifier_components if parent_identifier_components
-    else
-      @identifier_components = identifier_components
-    end
+  # URIs and identity
+
+  # You would typically set @uri in your constructor; resources don't have to have a URI, but certain parts of the framework require a URI
+  # in order to create links to the object for Location headers, links etc.
+  # Also see Router (and note that a Resource can also act as a Router for its subresources)
+
+  # The URI path of this resource
+  attr_reader :uri
+
+  # Wraps up the URI path of this resource as a URI::Generic
+  def uri_object
+    URI::Generic.build(:path => uri)
   end
 
-  private :initialize_resource
-
-  # identifier_components is an array of objects representing components of this object's URI path.
-  # You don't need to worry about URI encoding issues, just treat these as arbitrary strings
-  #
-  # (In fact if you want to, you can specify an arbitrary ruby object, eg an integer, as an identifier component, but it must support to_s,
-  #  and resolve_subresource must be prepared to accept the string version of it)
-  attr_reader :identifier_components
-
-  # A resource has_identifier? if identifier_components are set. A resource which has_identifier? can be referred to
-  def has_identifier?
-    !@identifier_components.nil?
-  end
-
-  # Get an Addressable::URI object for this resource's URI. Will return a relative URI with only the path specified; you can merge or join with
-  # some base URI to get an absolute URI.
-  def uri
-    Addressable::URI.new(:path => Rack::REST::Utils.identifier_components_to_path(@identifier_components))
-  end
-
-  # The parent resource. Having a parent resource implies that the parent's identifier_components array is a prefix of yours, hence a hierarchy of identifiers.
-  # If you don't like hierarchies, you're of course welcome to have a flat identifier scheme where everything is a child of one root resource.
-  # But a resource hierarchy here allows a nice generic treatment of things like collection resources.
-  attr_reader :parent
-
-  # The additional identifier components used to resolve this resource as a child of its parent
-  attr_reader :additional_identifier_components
-
-  # identifier_components given here may be strings; you can if you want convert them to appropriate ruby objects (eg an integer) provided the result
-  # of to_s on the resulting object is the same as the original string.
-  # if foo.resolve_subresource(bar) returns a resource, that resource must have foo as its parent, bar as its additional_identifier_components.
-  def resolve_subresource(identifier_components)
-    first_component, *others = *identifier_components
-    resource = self.subresource(first_component) and [resource, others]
-  end
-
-  # Convenience hook to resolve a subresource by a single identifier component (the most common case)
-  def subresource(identifier_component)
-    nil
-  end
 
   # Authorization / Authentication:
   #
@@ -66,36 +21,23 @@ module Rack::REST::Resource
   # If you deny an action by the unauthenticated user, this will be taken as a requirement for authentication. So eg if authentication is all you require,
   # you could just return !user.nil?
   #
-  # action will be one of:
-  #  * resolve_subresource
+  # method will be one of:
   #  * get, put, post, delete, or some other recognized_method where we supports_method?
-  #  * put_on_subresource, post_on_subresource, delete_on_subresource, or some other recognized_method where we supports_method_on_subresource?
   #
-  # user will be the authenticated user, or nil if there is no authenticated user. The exact nature of the user object will depend on the middleware used to do authentication.
-  #
-  # the reason resolve_subresource is included alongside the request methods as an action for authorization is so that you can easily implement simple blanket
-  # authorization rules for all subresources of a given resource.
-  def authorize(user, action)
+  # user will be the authenticated user, or nil if there is no authenticated user. The exact nature of the user object will depend on the middleware used
+  # to do authentication.
+  def authorize(user, method)
     true
   end
 
-  # You can return false here to make a resource instance act like it doesn't exist, as an alternative to returning nil from resolve_subresource on the parent.
+  # You can return false here to make a resource instance act like it doesn't exist.
   #
-  # You could use this if it's more convenient to have resolve_subresource create an instance representing the potentially-extant resource,
-  # and to have the existence test run on the instance.
+  # You could use this if it's more convenient to have a router create an instance representing a potentially-extant resource,
+  # and to have the actual existence test run on the instance.
   #
   # Or you can use it if you want to support certain non-get methods on a resource, but appear non-existent in response to get requests.
-  # (implementing put_on_subresource on the parent resource is available too as an alternative for implementing put on a non-existent resource)
   def exists?
     true
-  end
-
-  # Recognizing a method just means, 'we know what you mean here'. Whether this resource supports_method? it is another question, which
-  # will only be asked only for recognized methods.
-  # This is to distinguish 'method not implemented' from 'method not allowed'. Also ensures that supports_method doesn't get passed
-  # anything stupid and/or dangerous from user input.
-  def recognized_methods
-    ['get', 'post', 'put', 'delete']
   end
 
   # A convenience which some libraries add to Kernel
@@ -125,7 +67,7 @@ module Rack::REST::Resource
   #     NB: if you return multiple entities we recommend using 'lazy' Rack::REST::Entity instances constructed with a block -
   #         this way the entity data will not need to be generated for entities which aren't selected by content negotiation.
   #
-  #   * A resource representation, in the form of a Rack::REST::Resource which has_identifier?
+  #   * A resource representation, in the form of a Rack::REST::Resource with a URI
   #     This would correspond to a redirect in HTTP.
   #
   # If you wish to indicate that the resource is missing, return false from exists?
@@ -245,89 +187,5 @@ module Rack::REST::Resource
   # Otherwise assumed same as general cache_expiry_period.
   def public_cache_expiry_period
     nil
-  end
-
-
-
-
-  # "method on subresource" hooks for parent resources
-  #
-  # Why is this functionality offered? main use cases:
-  # * a put to a missing subresource
-  #    - because the parent needs the ability to handle this when the subresource doesn't yet exist
-  # * a put which replaces an existing child resource
-  #    - because sometimes it'll be more convenient for the parent resource to handle replacing its child, rather
-  #      than the child 'replacing' itself.
-  # * a delete which removes a child resource
-  #    - again sometimes it'll be more convenient for the parent to handle removing a child, than for the child to remove
-  #      itself
-  #
-  # How this works: first of all resolve_subresource is used to resolve the identifier as far as possible.
-  # If remaining identifier components are left over, these are interpreted as referring to a missing subresource.
-  # Each parent resource in turn is then given an opportunity to support the method on a subresource, and passed
-  # the remaining identifier components required at that level to refer to the child subresource in question.
-  #
-  # If the resource is resolved fully but doesn't directly support the method in question, again each parent
-  # resource in turn is then given an opportunity to support the method on a subresource, and passed
-  # the remaining identifier components required at that level to refer to the child subresource in question.
-  #
-  # Only non-get methods may be supported on a subresource.
-  # If you support a method on a subresource, you need to define a corresponding #{method}_on_subresource method, eg:
-  # * put_on_subresource(child_identifier_components, entity)
-  # * post_on_subresource(child_identifier_components, entity)
-  # * delete_on_subresource(child_identifier_components)
-  def supports_method_on_subresource?(child_identifier_components, method)
-    try("supports_#{method}_on_subresource?", child_identifier_components)
-  end
-
-  def accepts_method_on_subresource_with_media_type?(child_identifier_components, method, entity)
-    try("accepts_#{method}_on_subresource_with_media_type?", child_identifier_components, entity)
-  end
-
-
-
-
-
-  # Resource-level Range requests
-
-  # May return a list of supported resource-level unit types, eg 'items', 'pages'.
-  #
-  # Note that this interface is not intended to be used when the range depends on the particular representation entity selected
-  # (eg for byte-ranges). TODO: add a representation-entity-specific range API which is called after content negotiation.
-  #
-  # If there are supported_range_units, then calls to get may be passed an instance of Rack::REST::Range.
-  # get must then return the whole collection (if range not given) or just the range specified (if given)
-  # or nil (if the range specified turns out to be unsatisfiable).
-  def supported_range_units
-    nil
-  end
-
-  # Where range units are supported and a range request is made, this will be called with a range, instead of get
-  # Interface otherwise the same as for get.
-  def get_with_range(range)
-    nil
-  end
-
-  # Since some of these may depend on the particular representation entity negotiated, a negotiator may be passed to them as to get.
-
-  # Given a supported unit type, should return an integer for how many of that unit exist in this resource.
-  # May return nil if the length is not known upfront or you don't wish to calculate it upfront; in this case
-  # length_of_range_satisfiable will be called to establish how much of the range is able to be satisfied.
-  def range_length(units)
-    nil
-  end
-
-  # Only called if range_length is not known. Given a Rack::REST::Range, return the length of that range
-  # which you will be able to satisfy. Something between 0 and range.length. You could use this eg to 'suck it and see'
-  # via an sql query with an offset and limit, without asking for the total count.
-  def length_of_range_satisfiable(range)
-    nil
-  end
-
-  # Passed a Rack::REST::Range, your chance to reject it outright for perfomance or other arbitrary reasons (like, eg, too long, too big an offset).
-  # Note that you don't need to check whether it's within the total length of your collection; you should define range_length
-  # so that this check can be performed separately.
-  def range_acceptable?(range)
-    true
   end
 end

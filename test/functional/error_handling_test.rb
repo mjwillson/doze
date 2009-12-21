@@ -15,14 +15,14 @@ class ErrorHandlingTest < Test::Unit::TestCase
   include Rack::REST::TestCase
 
   def test_default_error_resource
-    root_resource.expects(:exists?).returns(false).at_least_once
+    root.expects(:exists?).returns(false).at_least_once
     get
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_match /not found/i, last_response.body
   end
 
   def test_default_error_resource_negotiation
-    root_resource.expects(:exists?).returns(false).at_least_once
+    root.expects(:exists?).returns(false).at_least_once
     get('HTTP_ACCEPT' => 'application/json')
     assert_equal STATUS_NOT_FOUND, last_response.status
     assert_equal 'application/json', last_response.media_type
@@ -42,7 +42,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
     CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found', anything).returns(e).once
     e.expects(:get).returns(Rack::REST::Entity.new("foo bar baz", :media_type => 'text/custom_error')).once
 
-    root_resource.expects(:exists?).returns(false).at_least_once
+    root.expects(:exists?).returns(false).at_least_once
 
     app(:error_resource_class => CustomErrorResource)
     get
@@ -52,7 +52,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_error_without_error_resource
-    root_resource.expects(:exists?).returns(false).at_least_once
+    root.expects(:exists?).returns(false).at_least_once
     app(:error_resource_class => nil)
     get
     assert_equal STATUS_NOT_FOUND, last_response.status
@@ -63,7 +63,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_caught_from_resource_code
     app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => true)
 
-    root_resource.expects(:get).raises(RuntimeError, 'Oi!')
+    root.expects(:get).raises(RuntimeError, 'Oi!')
     get
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status
     assert_match /internal server error/i, last_response.body
@@ -72,7 +72,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_not_caught_from_resource_code
     app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => false)
 
-    root_resource.expects(:get).raises(FooException, 'Oi!')
+    root.expects(:get).raises(FooException, 'Oi!')
     assert_raise(FooException) {get}
   end
 
@@ -81,7 +81,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
 
     CustomErrorResource.any_instance.expects(:get).raises(FooException)
 
-    root_resource.expects(:exists?).returns(false).at_least_once
+    root.expects(:exists?).returns(false).at_least_once
     get
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status
   end
@@ -89,7 +89,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_within_error_resource_code_after_catching_exception_from_resource_code
     app(:error_resource_class => CustomErrorResource, :catch_application_errors => true)
 
-    root_resource.expects(:get).raises(RuntimeError)
+    root.expects(:get).raises(RuntimeError)
     CustomErrorResource.any_instance.expects(:get).raises(FooException)
 
     get

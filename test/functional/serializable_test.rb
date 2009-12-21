@@ -7,12 +7,12 @@ class SerializableTest < Test::Unit::TestCase
   include Rack::REST::TestCase
 
   def setup
-    root_resource.extend(Rack::REST::Resource::Serializable)
+    root.extend(Rack::REST::Resource::Serializable)
     @ruby_data = ['some', 123, 'ruby data']
   end
 
   def test_get_serialized
-    root_resource.expects(:get_data).returns(@ruby_data).twice
+    root.expects(:get_data).returns(@ruby_data).twice
 
     get('HTTP_ACCEPT' => 'application/json')
     assert_equal STATUS_OK, last_response.status
@@ -26,8 +26,8 @@ class SerializableTest < Test::Unit::TestCase
   end
 
   def test_put_serialized
-    root_resource.expects(:supports_put?).returns(true).twice
-    root_resource.expects(:put_data).with(@ruby_data).twice
+    root.expects(:supports_put?).returns(true).twice
+    root.expects(:put_data).with(@ruby_data).twice
 
     put('CONTENT_TYPE' => 'application/json', :input => @ruby_data.to_json)
     assert_equal STATUS_NO_CONTENT, last_response.status
@@ -37,8 +37,8 @@ class SerializableTest < Test::Unit::TestCase
   end
 
   def test_post_serialized
-    root_resource.expects(:supports_post?).returns(true).twice
-    root_resource.expects(:post_data).with(@ruby_data).twice
+    root.expects(:supports_post?).returns(true).twice
+    root.expects(:post_data).with(@ruby_data).twice
 
     post('CONTENT_TYPE' => 'application/json', :input => @ruby_data.to_json)
     assert_equal STATUS_NO_CONTENT, last_response.status
@@ -48,8 +48,8 @@ class SerializableTest < Test::Unit::TestCase
   end
 
   def test_form_post
-    root_resource.expects(:supports_post?).returns(true).once
-    root_resource.expects(:post_data).with({'abc' => {'def' => 'ghi'}, 'e' => '='}).once
+    root.expects(:supports_post?).returns(true).once
+    root.expects(:post_data).with({'abc' => {'def' => 'ghi'}, 'e' => '='}).once
     post('CONTENT_TYPE' => 'application/x-www-form-urlencoded', :input => "abc%5Bdef%5D=ghi&e=%3D")
     assert_equal STATUS_NO_CONTENT, last_response.status
   end

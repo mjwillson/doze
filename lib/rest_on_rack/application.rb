@@ -1,10 +1,25 @@
 require 'rest_on_rack/utils'
 require 'rest_on_rack/error'
 require 'rest_on_rack/resource_responder'
+require 'rest_on_rack/uri_template'
+require 'rest_on_rack/request'
+require 'rest_on_rack/router'
+
+
+require 'time' # httpdate
+require 'rest_on_rack/resource'
+require 'rest_on_rack/resource/error'
+require 'rest_on_rack/entity'
+require 'rest_on_rack/request'
+require 'rest_on_rack/response'
+require 'rest_on_rack/responder'
+require 'rest_on_rack/responder/main'
+require 'rest_on_rack/responder/error'
+require 'rest_on_rack/responder/resource'
+require 'rest_on_rack/negotiator'
+
 class Rack::REST::Application
   include Rack::REST::Utils
-
-  attr_reader :config
 
   DEFAULT_CONFIG = {
     :error_resource_class => Rack::REST::Resource::Error,
@@ -14,55 +29,28 @@ class Rack::REST::Application
     :catch_application_errors => true,
 
     # useful for development
-    :expose_exception_details => true
+    :expose_exception_details => true,
+
+    # Methods not included here will be rejected with 'method not implemented'
+    # before any resource is called. (methods included here may still be rejected
+    # as not supported by individual resources via supports_method).
+    # Note: HEAD is supported as part of GET support, and OPTIONS comes for free.
+    :recognized_methods => [:get, :post, :put, :delete]
   }
 
-  def initialize(resource, config={})
-    @config = DEFAULT_CONFIG.merge(config)
-    @root_resource = resource
-    @script_name = nil
-  end
+  attr_reader :config, :root
 
-  # We use a resource class to represent for errors to enable content type negotiation for them.
-  # The class used is configurable but defaults to Rack::REST::Resource::Error
-  def error_response(error, request)
-    response = Rack::REST::Response.new
-    if config[:error_resource_class]
-      extras = config[:expose_exception_details] ? {:backtrace => error.backtrace} : {}
-      error_resource = config[:error_resource_class].new(error.http_status, error.message, extras)
-      responder = Rack::REST::ResourceResponder.new(error_resource, request)
-      response.entity = responder.get_preferred_representation(nil, true)
-    else
-      response.headers['Content-Type'] = 'text/plain'
-      response.body = error.message
-    end
-    response.head_only = true if request.request_method == 'HEAD'
-    response.status = error.http_status
-    response.headers.merge!(error.headers) if error.headers
-    response
+  # root may be a Router, a Resource, or both
+  def initialize(root, config={})
+    @config = DEFAULT_CONFIG.merge(config)
+    @root = root
   end
 
   def call(env)
-    request = Rack::Request.new(env)
-    configure_script_name(request)
-
-    identifier_components = path_to_identifier_components(request.path_info)
-
-    responder = Rack::REST::ResourceResponder.new(@root_resource, request, identifier_components)
     begin
-      begin
-        responder.respond.finish
-      rescue Rack::REST::Error => error
-        error_response(error, request).finish
-      rescue => exception
-        raise unless config[:catch_application_errors]
-        error = if config[:expose_exception_details]
-          Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR, exception.message, {}, exception.backtrace)
-        else
-          Rack::REST::Error.new(STATUS_INTERNAL_SERVER_ERROR)
-        end
-        error_response(error, request).finish
-      end
+      request = Rack::REST::Request.new(env)
+      responder = Rack::REST::Responder::Main.new(self, request)
+      responder.call
     rescue => exception
       raise unless config[:catch_application_errors]
       lines = ['500 response via error resource failed']
@@ -72,14 +60,5 @@ class Rack::REST::Application
       end
       [STATUS_INTERNAL_SERVER_ERROR, {}, [lines.join("\n")]]
     end
-  end
-
-  # On the first call to the application, we forcibly adjust the identifier_components of the root resource to take into account
-  # the request script_name (which should be fixed for all calls to the same application instance)
-  def configure_script_name(request)
-    return if @script_name
-    @script_name = request.script_name || '/'
-    root_resource_identifier_components = path_to_identifier_components(@script_name)
-    @root_resource.send(:initialize_resource, nil, root_resource_identifier_components)
   end
 end

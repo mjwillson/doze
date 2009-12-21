@@ -8,20 +8,31 @@ class Rack::REST::MockResource
   include Rack::REST::Resource
   include Rack::REST::Resource::SingleRepresentation
 
-  alias :initialize :initialize_resource
+  attr_reader :extra_params, :data
+
+  def initialize(uri=nil, data='')
+    @uri = uri
+    @data = data
+  end
 end
 
 module Rack::REST::TestCase
   include Rack::Test::Methods
 
-  def app(config={:catch_application_errors => false})
-    @app ||= Rack::REST::Application.new(root_resource, config)
+  TEST_CONFIG = {:catch_application_errors => false}
+
+  def app(config={})
+    @app ||= Rack::REST::Application.new(root, TEST_CONFIG.merge(config))
   end
 
-  attr_writer :root_resource
+  attr_writer :root
 
-  def root_resource
-    @root_resource ||= Rack::REST::MockResource.new(nil, [])
+  def root
+    @root ||= Rack::REST::MockResource.new("/")
+  end
+
+  def root_router(&b)
+    @root ||= mock_router(&b)
   end
 
   def get(path='/', env={}, &b)
@@ -59,6 +70,13 @@ module Rack::REST::TestCase
   end
 
   def mock_resource(*p); Rack::REST::MockResource.new(*p); end
+
+  def mock_router(superclass = Object, &block)
+    klass = Class.new(superclass)
+    klass.send(:include, Rack::REST::Router)
+    klass.class_eval(&block) if block
+    klass.new
+  end
 
   def assert_response_header(header, value, message=nil)
     assert_block(build_message(message, "<?> was expected for last response header <?>", value, header)) do

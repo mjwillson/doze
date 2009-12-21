@@ -58,7 +58,6 @@ spec = Gem::Specification.new do |s|
   # s.rubyforge_project = ''
 
   s.add_dependency('rack', '~> 1.0')
-  s.add_dependency('addressable', '~> 2.1')
 
   s.has_rdoc = true
   s.extra_rdoc_files = ['README']

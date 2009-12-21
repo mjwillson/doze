@@ -5,7 +5,7 @@ class CacheHeaderTest < Test::Unit::TestCase
   include Rack::REST::TestCase
 
   def test_with_no_cache_headers
-    root_resource.expects(:cacheable?).returns(nil).once
+    root.expects(:cacheable?).returns(nil).once
     get
     assert_nil last_response.headers['Cache-Control']
     assert_nil last_response.headers['Expires']
@@ -13,7 +13,7 @@ class CacheHeaderTest < Test::Unit::TestCase
   end
 
   def test_not_cacheable
-    root_resource.expects(:cacheable?).returns(false).once
+    root.expects(:cacheable?).returns(false).once
     get
     assert_response_header_includes 'Cache-Control', 'no-cache'
     assert_response_header_includes 'Cache-Control', 'max-age=0'
@@ -22,7 +22,7 @@ class CacheHeaderTest < Test::Unit::TestCase
   end
 
   def test_cacheable_but_no_expiry
-    root_resource.expects(:cacheable?).returns(true).at_least_once
+    root.expects(:cacheable?).returns(true).at_least_once
     get
     assert_response_header_not_includes 'Cache-Control', 'no-cache'
     assert_response_header_not_includes 'Cache-Control', 'max-age'
@@ -32,8 +32,8 @@ class CacheHeaderTest < Test::Unit::TestCase
   end
 
   def test_cacheable_with_expiry
-    root_resource.expects(:cacheable?).returns(true).at_least_once
-    root_resource.expects(:cache_expiry_period).returns(60).once
+    root.expects(:cacheable?).returns(true).at_least_once
+    root.expects(:cache_expiry_period).returns(60).once
     get
     assert_response_header_includes 'Cache-Control', 'max-age=60'
     assert_response_header_includes 'Cache-Control', 'public'
@@ -43,15 +43,15 @@ class CacheHeaderTest < Test::Unit::TestCase
 
   def test_last_modified
     while_ago = Time.now - 30
-    root_resource.expects(:last_modified).returns(while_ago).at_least_once
+    root.expects(:last_modified).returns(while_ago).at_least_once
     get
     assert_response_header 'Last-Modified', while_ago.httpdate
   end
 
   def test_private_cacheable
-    root_resource.expects(:cacheable?).returns(true).once
-    root_resource.expects(:publicly_cacheable?).returns(false).once
-    root_resource.expects(:cache_expiry_period).returns(60).once
+    root.expects(:cacheable?).returns(true).once
+    root.expects(:publicly_cacheable?).returns(false).once
+    root.expects(:cache_expiry_period).returns(60).once
     get
     assert_response_header_includes 'Cache-Control', 'max-age=60'
     assert_response_header_not_includes 'Cache-Control', 's-maxage'
@@ -62,9 +62,9 @@ class CacheHeaderTest < Test::Unit::TestCase
   end
 
   def test_cacheable_with_different_public_private_expiry
-    root_resource.expects(:cacheable?).returns(true).at_least_once
-    root_resource.expects(:cache_expiry_period).returns(60).once
-    root_resource.expects(:public_cache_expiry_period).returns(30).once
+    root.expects(:cacheable?).returns(true).at_least_once
+    root.expects(:cache_expiry_period).returns(60).once
+    root.expects(:public_cache_expiry_period).returns(30).once
     get
     assert_response_header_includes 'Cache-Control', 'max-age=60'
     assert_response_header_includes 'Cache-Control', 's-maxage=30'
