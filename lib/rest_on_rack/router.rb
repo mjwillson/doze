@@ -64,6 +64,7 @@ module Rack::REST::Router
 
       method = if block
         route_method_name = "route_#{options[:name] || routes.length}"
+        options[:name] ||= "route_#{routes.length}"
         m = define_method(route_method_name, &block)
         private(route_method_name)
         m

@@ -62,30 +62,6 @@ class RouterInterfaceTest < Test::Unit::TestCase
 
     assert_equal STATUS_OK, get('/foo').status
   end
-
-  def test_root_router_with_script_name
-    root_router.expects(:route).with('/boz', :get, '/foo%20bar/baz').once
-    get('/boz', 'SCRIPT_NAME' => '/foo%20bar/baz')
-  end
-
-  def test_root_resource_with_script_name
-    class << root; attr_writer :uri; end
-    root.expects(:uri=).with("/foo%20bar/baz")
-    root.expects(:route).never
-    get('/', 'SCRIPT_NAME' => '/foo%20bar/baz')
-  end
-
-  def test_root_router_with_script_name
-    root_router.expects(:route).with('/boz', :get, '/foo%20bar/baz').once
-    get('/boz', 'SCRIPT_NAME' => '/foo%20bar/baz')
-  end
-
-  def test_root_resource_with_script_name
-    class << root; attr_writer :uri; end
-    root.expects(:uri=).with("/foo%20bar/baz")
-    root.expects(:route).never
-    get('/', 'SCRIPT_NAME' => '/foo%20bar/baz')
-  end
 end
 
 

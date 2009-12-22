@@ -40,7 +40,8 @@ class Rack::REST::Application
 
   attr_reader :config, :root
 
-  # root may be a Router, a Resource, or both
+  # root may be a Router, a Resource, or both.
+  # If a resource, its uri should return '/'
   def initialize(root, config={})
     @config = DEFAULT_CONFIG.merge(config)
     @root = root

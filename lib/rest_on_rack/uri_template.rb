@@ -4,11 +4,17 @@ class Rack::REST::URITemplate
 
   def initialize(string, var_regexps={})
     @string = string
-    regexp = ''; @variables = []; @is_varexp = true
-    string.split(/\{(.*?)\}/).each do |bit|
-      if (@is_varexp = !@is_varexp)
+    @var_regexps = var_regexps
+  end
+
+  def compile!
+    return if @compiled
+    regexp = ''; @variables = []; is_varexp = true
+    @bits = @string.split(/\{(.*?)\}/)
+    @bits.each do |bit|
+      if (is_varexp = !is_varexp)
         var = bit.to_sym
-        regexp << "(#{var_regexps[var] || DEFAULT_VAR_REGEXP})"
+        regexp << "(#{@var_regexps[var] || DEFAULT_VAR_REGEXP})"
         @variables << var
       else
         regexp << Regexp.escape(bit)
@@ -16,12 +22,28 @@ class Rack::REST::URITemplate
     end
     @regexp = Regexp.new("^" + regexp + "$")
     @start_anchored_regexp = Regexp.new("^" + regexp)
+    @compiled = true
   end
 
-  attr_reader :variables, :regexp, :string
+  attr_reader :string
   alias :to_s :string
 
+  def has_variables?
+    @string.include?(?{)
+  end
+
+  def variables
+    compile!
+    @variables
+  end
+
+  def bits
+    compile!
+    @bits
+  end
+
   def match(uri, unescape=true)
+    compile!
     match = @regexp.match(uri) or return
     result = {}
     match.captures.each_with_index do |cap,i|
@@ -32,6 +54,7 @@ class Rack::REST::URITemplate
   end
 
   def match_with_trailing(uri, unescape=true)
+    compile!
     match = @start_anchored_regexp.match(uri) or return
     result = {}
     match.captures.each_with_index do |cap,i|
@@ -44,6 +67,11 @@ class Rack::REST::URITemplate
   end
 
   def inspect
-    "#<#{self.class} #{string.inspect}>"
+    "#<#{self.class} #{@string.inspect}>"
+  end
+
+  # prefix should be just a URI string, not another URI template
+  def with_uri_prefix(prefix)
+    self.class.new(prefix + @string, @var_regexps)
   end
 end

@@ -13,16 +13,10 @@ class Rack::REST::Responder::Main < Rack::REST::Responder
 
   def route_request
     route_to = @app.root
-    path = @request.path_info
+    remaining_path = @request.path_info
+    remaining_path = nil if remaining_path.empty? || remaining_path == '/'
     method = recognized_method
-
-    if path == '/' && route_to.is_a?(Rack::REST::Resource)
-      route_to.uri = @request.script_name || '/' if route_to.respond_to?(:uri=)
-      return route_to
-    end
-
-    base_uri = @request.script_name || ''
-    remaining_path = path
+    base_uri = ''
 
     while true
       if remaining_path && route_to.is_a?(Rack::REST::Router)
