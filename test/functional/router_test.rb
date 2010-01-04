@@ -135,7 +135,7 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
 
   def test_route_with_uri_template_passed_directly
     root_router do
-      route(Rack::REST::URITemplate.new('/foo/{x}', :x => /\d+/)) do |uri, params|
+      route(Rack::REST::URITemplate.compile('/foo/{x}', :x => /\d+/)) do |uri, params|
         Rack::REST::MockResource.new(uri, params[:x])
       end
     end

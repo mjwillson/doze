@@ -72,20 +72,28 @@ END
     when URI
       "<a href='#{Rack::Utils.escape_html(data)}'>#{Rack::Utils.escape_html(data)}</a>"
     when Rack::REST::URITemplate
-      if data.has_variables?
+      if data.variables.length > 0
         # Clever HTML rendering of a URI template.
         # Make a HTML form which uses some javascript onsubmit to navigate to an expanded version of the URI template,
         # with blanks filled in via INPUTs.
-        is_varexp = true; inputs = ''; js = []
-        data.bits.each_with_index do |bit,i|
-          if (is_varexp = !is_varexp)
-            inputs << "<input name='#{Rack::Utils.escape_html(bit)}'>"
-            js << "this.elements[#{i/2}].value"
-          else
-            inputs << Rack::Utils.escape_html(bit)
-            js << bit.to_json
+        inputs = data.parts.map do |part|
+          case part
+          when Rack::REST::URITemplate::String
+            Rack::Utils.escape_html(part.string)
+          when Rack::REST::URITemplate::Variable
+            "<input name='#{Rack::Utils.escape_html(part.name)}'>"
+          end
+        end.join
+
+        i=-1; js = data.parts.map do |part|
+          case part
+          when Rack::REST::URITemplate::String
+            part.string.to_json
+          when Rack::REST::URITemplate::Variable
+            i += 1; "this.elements[#{i}].value"
           end
         end
+
         js = "window.location.href = #{js.join(" + ")}; return false"
         "<form method='GET' onsubmit='#{Rack::Utils.escape_html(js)}'>#{inputs}<input type='submit'></form>"
       else

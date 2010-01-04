@@ -28,30 +28,48 @@ module Rack::REST::Router
     self.class.routes.each do |route|
       methods = route[:methods]
       next if methods && ![*methods].include?(method)
-      match, uri, trailing = route[:pattern].match_with_trailing(path)
+      match, uri, trailing = route[:template].match_with_trailing(path)
       next unless match
       base_uri_for_match = base_uri + uri
 
-      result = if (method = route[:method])
-        send(method, base_uri_for_match, match)
-      elsif (resource_class = route[:to])
-        resource_class.new(base_uri_for_match)
-      end
-      next unless result
+      result = call_route(route, base_uri_for_match, match) or next
 
       return [result, base_uri_for_match, trailing]
     end
     nil
   end
 
-  def route_pattern(name)
-    route = self.class.routes_by_name[name] or return
-    respond_to?(:uri_without_trailing_slash) ? route[:pattern].with_uri_prefix(uri_without_trailing_slash) : route[:pattern]
+  # If this particular router instance has a uri prefix associated with it
+  def router_uri_prefix
+    uri_without_trailing_slash if respond_to?(:uri_without_trailing_slash)
   end
 
-  def expand_route(name, vars)
-    pattern = route_pattern(name) and pattern.expand(vars)
+  def route_template(name)
+    self.class.route_template(name, router_uri_prefix)
   end
+
+  def expand_route_template(name, vars)
+    self.class.expand_route_template(name, vars, router_uri_prefix)
+  end
+
+  def partially_expand_route_template(name, vars)
+    self.class.partially_expand_route_template(name, vars, router_uri_prefix)
+  end
+
+  def get_route(name, vars)
+    route = self.class.routes_by_name[name] or return
+    base_uri = expand_route_template(name, vars)
+    call_route(route, base_uri, vars)
+  end
+
+  private
+    def call_route(route, base_uri, vars)
+      if (method = route[:method])
+        send(method, base_uri, vars)
+      elsif (resource_class = route[:to])
+        resource_class.new(base_uri)
+      end
+    end
 
   module ClassMethods
     def routes
@@ -60,6 +78,19 @@ module Rack::REST::Router
 
     def routes_by_name
       @routes_by_name ||= (superclass.respond_to?(:routes_by_name) ? superclass.routes_by_name.dup : {})
+    end
+
+    def route_template(name, prefix=nil)
+      route = routes_by_name[name] or return
+      prefix ? route[:template].with_prefix(prefix) : route[:template]
+    end
+
+    def expand_route_template(name, vars, prefix=nil)
+      template = route_template(name, prefix) and template.expand(vars)
+    end
+
+    def partially_expand_route_template(name, vars, prefix=nil)
+      template = route_template(name, prefix) and template.partially_expand(vars)
     end
 
     private
@@ -72,9 +103,9 @@ module Rack::REST::Router
     #     # this is evaluated in instance scope
     #     ArtistResource.new(base_uri, match[:id])
     #   end
-    def route(pattern, options={}, &block)
-      pattern = Rack::REST::URITemplate.new(pattern, options[:regexps] || {}) unless pattern.is_a?(Rack::REST::URITemplate)
-      options[:pattern] = pattern
+    def route(template, options={}, &block)
+      template = Rack::REST::URITemplate.compile(template, options[:regexps] || {}) unless template.is_a?(Rack::REST::URITemplate)
+      options[:template] = template
 
       if block
         route_method_name = "route_#{options[:name] || routes.length}"
