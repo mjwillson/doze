@@ -9,7 +9,7 @@ class Rack::REST::URITemplate
 
   def compile!
     return if @compiled
-    regexp = ''; @variables = []; is_varexp = true
+    regexp = ''; @variables = []; @strings = []; is_varexp = true
     @bits = @string.split(/\{(.*?)\}/)
     @bits.each do |bit|
       if (is_varexp = !is_varexp)
@@ -18,6 +18,7 @@ class Rack::REST::URITemplate
         @variables << var
       else
         regexp << Regexp.escape(bit)
+        @strings << bit
       end
     end
     @regexp = Regexp.new("^" + regexp + "$")
@@ -73,5 +74,15 @@ class Rack::REST::URITemplate
   # prefix should be just a URI string, not another URI template
   def with_uri_prefix(prefix)
     self.class.new(prefix + @string, @var_regexps)
+  end
+
+  def expand(vars)
+    compile!
+    expanded = ''
+    @strings.each_with_index do |string,i|
+      expanded << string
+      var = @variables[i] and expanded << vars[var].to_s
+    end
+    expanded
   end
 end

@@ -32,8 +32,8 @@ module Rack::REST::Router
       next unless match
       base_uri_for_match = base_uri + uri
 
-      result = if (block = route[:method])
-        block.call(base_uri_for_match, match)
+      result = if (method = route[:method])
+        send(method, base_uri_for_match, match)
       elsif (resource_class = route[:to])
         resource_class.new(base_uri_for_match)
       end
@@ -44,9 +44,22 @@ module Rack::REST::Router
     nil
   end
 
+  def route_pattern(name)
+    route = self.class.routes_by_name[name] or return
+    respond_to?(:uri_without_trailing_slash) ? route[:pattern].with_uri_prefix(uri_without_trailing_slash) : route[:pattern]
+  end
+
+  def expand_route(name, vars)
+    pattern = route_pattern(name) and pattern.expand(vars)
+  end
+
   module ClassMethods
     def routes
       @routes ||= (superclass.respond_to?(:routes) ? superclass.routes.dup : [])
+    end
+
+    def routes_by_name
+      @routes_by_name ||= (superclass.respond_to?(:routes_by_name) ? superclass.routes_by_name.dup : {})
     end
 
     private
@@ -61,22 +74,20 @@ module Rack::REST::Router
     #   end
     def route(pattern, options={}, &block)
       pattern = Rack::REST::URITemplate.new(pattern, options[:regexps] || {}) unless pattern.is_a?(Rack::REST::URITemplate)
+      options[:pattern] = pattern
 
-      method = if block
+      if block
         route_method_name = "route_#{options[:name] || routes.length}"
         options[:name] ||= "route_#{routes.length}"
-        m = define_method(route_method_name, &block)
+        define_method(route_method_name, &block)
         private(route_method_name)
-        m
+        options[:method] = route_method_name
       end
 
-      routes << options.merge(
-        :pattern => pattern,
-        :method  => method
-      )
+      routes << options
+      routes_by_name[options[:name]] = options
     end
 
     def reset_routes!; @routes = []; end
-
   end
 end
