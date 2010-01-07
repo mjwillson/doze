@@ -103,16 +103,23 @@ module Rack::REST::Router
     #     # this is evaluated in instance scope
     #     ArtistResource.new(base_uri, match[:id])
     #   end
+    #
+    #   route '/foo', :name => 'bar', :method => :route_bar
+    #   def route_bar(base_uri, match); ... ;end
+    #
     def route(template, options={}, &block)
       template = Rack::REST::URITemplate.compile(template, options[:regexps] || {}) unless template.is_a?(Rack::REST::URITemplate)
       options[:template] = template
 
+      route_method_name = "route_#{options[:name] || routes.length}"
+      options[:name] ||= "route_#{routes.length}"
+
       if block
-        route_method_name = "route_#{options[:name] || routes.length}"
-        options[:name] ||= "route_#{routes.length}"
         define_method(route_method_name, &block)
         private(route_method_name)
-        options[:method] = route_method_name
+      end
+      if method_defined?(route_method_name) || private_method_defined?(route_method_name)
+        options[:method] ||= route_method_name
       end
 
       routes << options
