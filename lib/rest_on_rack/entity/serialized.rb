@@ -2,7 +2,7 @@
 class Rack::REST::Entity::Serialized < Rack::REST::Entity
   def data
     @ruby_data ||= (@ruby_data_block.call if @ruby_data_block)
-    @data ||= if @ruby_data then serialize else raise "Can't generate serialized data - no ruby_data to use" end
+    @data ||= serialize
   end
 
   attr_writer :ruby_data, :ruby_data_block
