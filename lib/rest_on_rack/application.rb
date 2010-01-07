@@ -1,15 +1,12 @@
+require 'time' # httpdate
 require 'rest_on_rack/utils'
 require 'rest_on_rack/error'
-require 'rest_on_rack/resource_responder'
 require 'rest_on_rack/uri_template'
 require 'rest_on_rack/request'
 require 'rest_on_rack/router'
-
-
-require 'time' # httpdate
 require 'rest_on_rack/resource'
-require 'rest_on_rack/resource/error'
 require 'rest_on_rack/entity'
+require 'rest_on_rack/resource/error'
 require 'rest_on_rack/request'
 require 'rest_on_rack/response'
 require 'rest_on_rack/responder'

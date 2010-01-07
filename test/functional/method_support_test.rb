@@ -33,7 +33,7 @@ class MethodSupportTest < Test::Unit::TestCase
 
   def test_options_with_get_supported_with_head_and_options_handled_automatically
     root.expects(:supports_get?).returns(true).once
-    assert_equal STATUS_OK, other_request_method('OPTIONS').status
+    assert_equal STATUS_NO_CONTENT, other_request_method('OPTIONS').status
 
     allow = last_response.headers['Allow'] and allow = allow.split(', ')
     assert_not_nil allow
@@ -41,7 +41,7 @@ class MethodSupportTest < Test::Unit::TestCase
   end
 
   def test_options_on_missing_resource
-    assert_equal STATUS_OK, other_request_method('OPTIONS', '/blah').status
+    assert_equal STATUS_NO_CONTENT, other_request_method('OPTIONS', '/blah').status
     allow = last_response.headers['Allow'] and allow = allow.split(', ')
     assert_equal ['OPTIONS'], allow
   end

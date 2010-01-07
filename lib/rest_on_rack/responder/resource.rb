@@ -14,7 +14,7 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
   def response
     if @request.options?
-      Rack::REST::Response.new(STATUS_OK, allow_header)
+      Rack::REST::Response.new(STATUS_NO_CONTENT, allow_header)
     elsif !@resource.supports_method?(recognized_method)
       error_response(STATUS_METHOD_NOT_ALLOWED, nil, allow_header)
     else
@@ -230,7 +230,7 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
       if result.uri
         Rack::REST::Response.new_redirect(result, @request, status_for_resource_redirect_result)
       else
-        Rack::REST::ResourceResponder.new(result, @request).make_representation_of_resource_response
+        Rack::REST::Responder::Resource.new(@app, @request, result, @options).make_representation_of_resource_response
       end
     when Rack::REST::Entity
       Rack::REST::Response.new_from_entity(result)

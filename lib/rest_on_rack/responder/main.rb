@@ -4,8 +4,15 @@ class Rack::REST::Responder::Main < Rack::REST::Responder
     resource = route_request
     if resource
       Rack::REST::Responder::Resource.new(@app, @request, resource).response
-    elsif recognized_method == :options
-      Rack::REST::Response.new(STATUS_OK, 'Allow' => 'OPTIONS')
+    elsif @request.options?
+      if @request.path_info == '*'
+        # Special response for "OPTIONS *" as in HTTP spec:
+        rec_methods = (@app.config[:recognized_methods] + [:head, :options]).join(', ').upcase
+        Rack::REST::Response.new(STATUS_NO_CONTENT, 'Allow' => rec_methods)
+      else
+        # Special OPTIONS response for non-existent resource:
+        Rack::REST::Response.new(STATUS_NO_CONTENT, 'Allow' => 'OPTIONS')
+      end
     else
       error_response(STATUS_NOT_FOUND)
     end
