@@ -16,9 +16,14 @@ class Rack::REST::Request < Rack::Request
   end
 
   def entity
-    body = self.body
-    body = body.string if body.is_a?(StringIO)
-    @entity ||= Rack::REST::Entity.new(body, :media_type => media_type, :encoding => content_charset) unless body.empty?
+    return @entity if defined?(@entity)
+    @entity = begin
+      body = @env['rack.input']; @data = ''
+      while (result = body.read(4096))
+        @data << result
+      end
+      Rack::REST::Entity.new(@data, :media_type => media_type, :encoding => content_charset) unless @data.empty?
+    end
   end
 
   # For now, to do authentication you need some (rack) middleware that sets one of these env's.

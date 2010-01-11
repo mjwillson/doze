@@ -25,7 +25,7 @@ module Rack::REST::Resource::Serializable
   end
 
   def put(entity)
-    put_data(entity.ruby_data)
+    put_data(entity && entity.ruby_data)
   end
 
   def post(entity)

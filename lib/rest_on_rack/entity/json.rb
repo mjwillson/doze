@@ -10,7 +10,13 @@ class Rack::REST::Entity::JSON < Rack::REST::Entity::Serialized
 
   def deserialize
     begin
-      ::JSON.parse(@data)
+      case @data
+      when /^[\[\{]/
+        ::JSON.parse(@data)
+      else
+        # A pox on the arbitrary syntactic limitation that a top-level piece of JSON must be a hash or array
+        ::JSON.parse("[#{@data}]").first
+      end
     rescue ::JSON::ParserError
       raise Rack::REST::ClientError, "Could not parse JSON"
     end
