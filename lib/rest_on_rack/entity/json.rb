@@ -18,7 +18,7 @@ class Rack::REST::Entity::JSON < Rack::REST::Entity::Serialized
         ::JSON.parse("[#{@data}]").first
       end
     rescue ::JSON::ParserError
-      raise Rack::REST::ClientError, "Could not parse JSON"
+      raise Rack::REST::ClientEntityError, "Could not parse JSON"
     end
   end
 end

@@ -1,5 +1,9 @@
 # Various stateless utility functions which aid the conversion back and forth between HTTP syntax and the more abstracted ruby representations we use.
 module Rack::REST::Utils
+  # Strictly this is a WebDAV extension but very useful in the wider HTTP context
+  # see http://tools.ietf.org/html/rfc4918#section-11.2
+  Rack::Utils::HTTP_STATUS_CODES[422] = 'Unprocessable entity'
+
   Rack::Utils::HTTP_STATUS_CODES.each do |code,text|
     const_set('STATUS_' << text.upcase.gsub(/[^A-Z]+/, '_'), code)
   end

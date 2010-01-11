@@ -12,7 +12,7 @@ class Rack::REST::Entity::YAML < Rack::REST::Entity::Serialized
     begin
       ::YAML.load(@data)
     rescue ::YAML::ParseError
-      raise Rack::REST::ClientError, "Could not parse YAML"
+      raise Rack::REST::ClientEntityError, "Could not parse YAML"
     end
   end
 end
