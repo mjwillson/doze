@@ -59,11 +59,11 @@ class GetAndConnegTest < Test::Unit::TestCase
     assert !(last_response.headers['Vary'] || '').split(/,\s*/).include?('Accept')
   end
 
-  def test_data_never_called_on_undesired_entity
+  def test_binary_data_never_called_on_undesired_entity
     root.expects(:get).returns(@entities).once
-    @entities[0].expects(:data).returns('<foo>Yalrightmate</foo>').at_least_once
-    @entities[1].expects(:data).never
-    @entities[2].expects(:data).never
+    @entities[0].expects(:binary_data).returns('<foo>Yalrightmate</foo>').at_least_once
+    @entities[1].expects(:binary_data).never
+    @entities[2].expects(:binary_data).never
     assert_equal STATUS_OK, get('HTTP_ACCEPT' => 'text/html').status
   end
 

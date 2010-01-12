@@ -1,3 +1,6 @@
+require 'rest_on_rack/error'
+require 'rest_on_rack/utils'
+
 # Some helpers for Rack::Request
 class Rack::REST::Request < Rack::Request
   # this delibarately ignores the HEAD vs GET distinction; use head? to check
@@ -22,8 +25,13 @@ class Rack::REST::Request < Rack::Request
       while (result = body.read(4096))
         @data << result
       end
-      Rack::REST::Entity.new(@data, :media_type => media_type, :encoding => content_charset) unless @data.empty?
+      Rack::REST::Entity.new_from_binary_data(media_type, @data, :encoding => content_charset) unless @data.empty?
     end
+  end
+
+  def media_type
+    mt = super or return
+    Rack::REST::MediaType[mt] or raise Rack::REST::Error.new(Rack::REST::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
   end
 
   # For now, to do authentication you need some (rack) middleware that sets one of these env's.

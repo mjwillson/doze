@@ -1,38 +1,35 @@
-require 'json'
-require 'rest_on_rack/entity/serialized'
+require 'rest_on_rack/media_type'
 
-class Rack::REST::Entity::WWWFormEncoded < Rack::REST::Entity::Serialized
-  register_for_media_type 'application/x-www-form-urlencoded'
+Rack::REST::MediaType.new('application/x-www-form-urlencoded') do
+  # ripped off largely from Merb::Parse
+  # Supports PHP-style nested hashes via foo[bar][baz]=boz
+
+  def serialize(value, prefix=nil)
+    case value
+    when Array
+      value.map {|v| serialize(v, "#{prefix}[]")}.join("&")
+    when Hash
+      value.map {|k,v| serialize(v, prefix ? "#{prefix}[#{escape(k)}]" : escape(k))}.join("&")
+    else
+      "#{prefix}=#{escape(value)}"
+    end
+  end
+
+  def deserialize(data)
+    query = {}
+    for pair in data.split(/[&;] */n)
+      key, value = unescape(pair).split('=',2)
+      next if key.nil?
+      if key.include?('[')
+        normalize_params(query, key, value)
+      else
+        query[key] = value
+      end
+    end
+    query
+  end
 
   private
-    # ripped off largely from Merb::Parse
-    # Supports PHP-style nested hashes via foo[bar][baz]=boz
-
-    def serialize(value=@ruby_data, prefix=nil)
-      case value
-      when Array
-        value.map {|v| serialize(v, "#{prefix}[]")}.join("&")
-      when Hash
-        value.map {|k,v| serialize(v, prefix ? "#{prefix}[#{escape(k)}]" : escape(k))}.join("&")
-      else
-        "#{prefix}=#{escape(value)}"
-      end
-    end
-
-    def deserialize
-      query = {}
-      for pair in @data.split(/[&;] */n)
-        key, value = unescape(pair).split('=',2)
-        next if key.nil?
-        if key.include?('[')
-          normalize_params(query, key, value)
-        else
-          query[key] = value
-        end
-      end
-      query
-    end
-
     def escape(s)
       s.to_s.gsub(/([^ a-zA-Z0-9_.-]+)/n) {
         '%'+$1.unpack('H2'*$1.size).join('%').upcase

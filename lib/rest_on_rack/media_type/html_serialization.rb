@@ -1,14 +1,12 @@
 require 'json'
-require 'rest_on_rack/entity/serialized'
+require 'rest_on_rack/media_type'
 require 'rest_on_rack/utils'
 
 # A browser-friendly media type for use with Rack::REST::Resource::Serializable
-class Rack::REST::Entity::HTML < Rack::REST::Entity::Serialized
-  register_for_media_type 'text/html'
+Rack::REST::MediaType::GenericSerializationFormat.new('application/x-html-serialization',
+  :plus_suffix => 'html', :output_name => 'text/html', :subtypes_use_output_name => true) do
 
-  private
-
-  def serialize
+  def serialize(data)
     # TODO move to a template
     html = <<END
 <html>
@@ -55,11 +53,13 @@ class Rack::REST::Entity::HTML < Rack::REST::Entity::Serialized
     </style>
   </head>
   <body>
-    #{make_html(@ruby_data)}
+    #{make_html(data)}
   </body>
 </html>
 END
   end
+
+  private
 
   def make_html(data)
     case data

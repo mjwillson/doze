@@ -1,18 +1,23 @@
 require 'rest_on_rack'
+require 'rest_on_rack/media_type'
 require 'test/unit'
 require 'rack/test'
 require 'mocha'
-require 'rest_on_rack/resource/single_representation'
+
+Rack::REST::MediaType.new('text/html')
 
 class Rack::REST::MockResource
   include Rack::REST::Resource
-  include Rack::REST::Resource::SingleRepresentation
 
   attr_reader :extra_params, :data
 
-  def initialize(uri=nil, data='')
+  def initialize(uri=nil, binary_data='')
     @uri = uri
-    @data = data
+    @binary_data = binary_data
+  end
+
+  def get
+    Rack::REST::Entity.new_from_binary_data(Rack::REST::MediaType['text/html'], @binary_data)
   end
 end
 
@@ -65,8 +70,9 @@ module Rack::REST::TestCase
     request(path, env.merge(:method => method, :params => {}), &block)
   end
 
-  def mock_entity(data, media_type='text/html', language=nil)
-    Rack::REST::Entity.new(:media_type => media_type, :language => language) {data}
+  def mock_entity(binary_data, media_type='text/html', language=nil)
+    media_type = Rack::REST::MediaType[media_type] if media_type.is_a?(String)
+    Rack::REST::Entity.new_from_binary_data(media_type, binary_data, :language => language)
   end
 
   def mock_resource(*p); Rack::REST::MockResource.new(*p); end
@@ -108,6 +114,25 @@ module Rack::REST::TestCase
     end
   end
 
+end
+
+# To be used for any test that defines new media types - cleans them up afterwards in the registry
+module Rack::REST::MediaTypeTestCase
+  def setup
+    @alias_lookup = Rack::REST::MediaType::ALIAS_LOOKUP.dup
+    @instances = Rack::REST::MediaType::GenericSerializationFormat::INSTANCES.dup
+    @by_plus_suffix = Rack::REST::MediaType::GenericSerializationFormat::BY_PLUS_SUFFIX.dup
+    super
+  end
+
+  def teardown
+    $VERBOSE = nil
+    Rack::REST::MediaType.const_set('ALIAS_LOOKUP', @alias_lookup)
+    Rack::REST::MediaType::GenericSerializationFormat.const_set('INSTANCES', @instances)
+    Rack::REST::MediaType::GenericSerializationFormat.const_set('BY_PLUS_SUFFIX', @by_plus_suffix)
+    $VERBOSE = false
+    super
+  end
 end
 
 class Rack::MockResponse

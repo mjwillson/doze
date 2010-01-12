@@ -6,11 +6,6 @@ class Rack::REST::Resource::Error
   include Rack::REST::Resource
   include Rack::REST::Resource::Serializable
 
-  # Fix the ordering here so JSON is prioritized
-  def supported_serialized_entity_subclasses
-    [Rack::REST::Entity::JSON, Rack::REST::Entity::YAML, Rack::REST::Entity::HTML]
-  end
-
   def initialize(status=Rack::REST::Utils::STATUS_INTERNAL_SERVER_ERROR, message=Rack::Utils::HTTP_STATUS_CODES[status], extras={})
     @status = status
     @message = message

@@ -22,7 +22,7 @@ class Rack::REST::Response
   end
 
   def entity=(entity)
-    content_type = entity.media_type
+    content_type = entity.media_type.output_name
     content_type = "#{content_type}; charset=#{entity.encoding}" if entity.encoding
     language = entity.language
     etag = entity.etag
@@ -31,7 +31,7 @@ class Rack::REST::Response
     @headers['Content-Language'] = language if language
     @headers['ETag'] = quote(etag) if etag
 
-    @body = entity.data
+    @body = entity.binary_data
   end
 
   def self.new_from_entity(entity, status=STATUS_OK)
