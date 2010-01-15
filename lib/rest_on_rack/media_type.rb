@@ -1,157 +1,114 @@
 class Rack::REST::MediaType
-  ALIAS_LOOKUP = {}
-  PLUS_SUFFIX_REGEXP = /\+([a-z0-9\-]+)$/
+  NAME_LOOKUP = {}
+
+  # Names for this media type.
+  # Names should uniquely identify the media type, so eg [audio/x-mpeg3, audio/mp3] might both be names of one
+  # media type, but application/xml is not a name of application/xhtml+xml; see matches_names
+  attr_reader :names
+
+  # The primary name for this media type.
+  def name; @names.first; end
+
+  # Media type strings which this media type matches.
+  # Matching means this media type is acceptable in reponse to a request for the media type string in question.
+  # Eg application/xhtml+xml is acceptable in response to a request for application/xml or text/xml,
+  # so text/xml and application/xml may be listed under the matches_names of application/xhtml+xml
+  attr_reader :matches_names
+
+  # The name used to describe this media type to clients (sometimes we want to use a more
+  # detailed media type internally). Defaults to name
+  def output_name
+    @output_name || @names.first
+  end
+
+  # Media types may be configured to use a different entity class to the default (Rack::REST::Entity) for an
+  # entity of that media type
+  attr_reader :entity_class
+
+  # Some serialization media types have a plus suffix which can be used to create derived types, eg
+  # application/xml, with plus_suffix 'xml', could have application/xhtml+xml as a derived type
+  # see register_derived_type
+  attr_reader :plus_suffix
+
+  # Creates and registers a media_type instance by its names for lookup via [].
+  # This means this instance will be used when a client submits an entity with any of the given
+  # names.
+  # You're recommended to register any media types that are frequently used as well,
+  # even if you don't need any special options or methods for them.
+  def self.register(name, options={})
+    new(name, options).register!
+  end
+
+  def register!
+    names.each do |n|
+      raise "Attempt to register media_type name #{n} twice" if NAME_LOOKUP.has_key?(n)
+      NAME_LOOKUP[n] = self
+    end
+    self
+  end
 
   def self.[](name)
-    ALIAS_LOOKUP[name]
+    NAME_LOOKUP[name] || new(name)
   end
 
-  attr_reader :name, :aliases
-
-  # The name used to describe this media type to clients (sometimes we want to use a more detailed media type internally)
-  # defaults to name
-  attr_reader :output_name
-
-  # Some deviousness to allow subtypes to override serialize/deserialize, and to inherit
-  # these methods from their supertype via ruby inheritance (meaning you can use super).
-  # This would actually be nicer in javascript with prototypical inheritance, or scala 'object's
-  def self.new(name, options={}, &block)
-    klass = if block
-      superclass = options[:supertypes] ? options[:supertypes][0].class : self
-      Class.new(superclass, &block).new(name, options)
-    else
-      super(name, options)
-    end
-  end
-
+  # name: primary name for the media type
+  # options:
+  #   :aliases      :: extra names to add to #names
+  #   :output_name  :: defaults to name
+  #   :also_matches :: extra names to add to matches_names, in addition to names and output_name
+  #   :entity_class
+  #   :plus_suffix
   def initialize(name, options={})
-    @name = name
-    @output_name = options[:output_name] || name
+    @names = [name]
+    @names.push(*options[:aliases]) if options[:aliases]
 
-    @aliases = options[:aliases] || []
-    # 'abstract' types will not be found via this lookup
-    unless options[:abstract]
-      ALIAS_LOOKUP[name] = self
-      @aliases.each {|a| ALIAS_LOOKUP[a] = self}
-    end
+    @output_name = options[:output_name]
 
-    @supertypes = options[:supertypes] || []
+    @matches_names = @names.dup
+    @matches_names << @output_name if @output_name
+    @matches_names.push(*options[:also_matches]) if options[:also_matches]
+    @matches_names.uniq!
+
+    @entity_class = options[:entity_class] || Rack::REST::Entity
+    @plus_suffix = options[:plus_suffix]
   end
 
   def major
-    @major ||= @name.split('/', 2)[0]
+    @major ||= name.split('/', 2)[0]
   end
 
   def minor
-    @major ||= @name.split('/', 2)[1]
+    @major ||= name.split('/', 2)[1]
   end
 
-  def serialize(data)
-    raise "media type doesn't support serialization"
+  # Helper to derive eg application/vnd.foo+json from application/json and name_prefix application/vnd.foo
+  def register_derived_type(name_prefix, options={})
+    options = {
+      :also_matches => [],
+      :entity_class => @entity_class
+    }.merge!(options)
+    options[:also_matches].push(*self.matches_names)
+    name = @plus_suffix ? "#{name_prefix}+#{plus_suffix}" : name_prefix
+    self.class.register(name, options)
   end
 
-  def deserialize(data)
-    raise "media type doesn't support deserialization"
+  # Create a new entity of this media_type from binary data. Uses entity_class
+  def new_entity_from_binary_data(*p, &b)
+    @entity_class.new_from_binary_data(self, *p, &b)
   end
 
-  def subtype?(other)
-    self == other || @supertypes.any? {|s| s.subtype?(other)}
+  def matches_prefix?(prefix)
+    @matches_names.any? {|name| name.start_with?(prefix)}
   end
 
-  def ===(entity_or_subtype)
-    case entity_or_subtype
-    when Rack::REST::Entity
-      entity_or_subtype.media_type.subtype?(self)
-    when Rack::REST::MediaType
-      entity_or_subtype.subtype?(self)
-    else
-      false
-    end
+  # Equality override to help in case multiple temporary instances of a media type of a given name are compared.
+  def ==(other)
+    super || (other.is_a?(Rack::REST::MediaType) && other.name == name)
   end
 
-  # strings for all applicable media type names for this and all its transitive supertypes
-  # mainly for use when judging whether an available entity's media type matches a client's content negotiation rules.
-  def all_applicable_names
-    @all_applicable_names ||= ([@name, @output_name] + @aliases + @supertypes.map {|s| s.all_applicable_names}.flatten).uniq
-  end
+  alias :eql? :==
 
-  def subtype(name, options={})
-    options[:supertypes] ||= []
-    options[:supertypes] << self unless options[:supertypes].include?(self)
-    self.class.new(name, options)
-  end
-
-  def inspect
-    klass = self.class
-    klass = klass.superclass while klass.name.empty?
-    "#<#{klass.name}: #{name}>"
-  end
-
-  # A low-level generic serialization format such as XML, JSON, YAML.
-  # May be used with WithGenericSerializationFormatSubtypes and recognised
-  # by its 'plus_suffix', eg xml for application/rdf+xml, json for application/vnd.foo.bar+json
-  class GenericSerializationFormat < Rack::REST::MediaType
-    INSTANCES = []
-    BY_PLUS_SUFFIX = {}
-
-    def initialize(name, options, &block)
-      super
-      BY_PLUS_SUFFIX[@plus_suffix] = self
-      INSTANCES << self
-      @plus_suffix = options[:plus_suffix] or raise ":plus_suffix required for GenericSerializationFormat"
-      @subtypes_use_output_name = options[:subtypes_use_output_name]
-    end
-
-    attr_reader :plus_suffix
-
-    # specify this when a generic serialization format wants any SerializationFormatSubtype based on it to
-    # use an output_name the same as its output_name, rather than eg application/abstract_type+plus_suffix
-    # Main example is application/x-html-serialization, which wants domain-specific subtypes to be output as
-    # text/html rather than application/vnd.foo.object+html which browsers won't understand.
-    def subtypes_use_output_name?; @subtypes_use_output_name; end
-  end
-
-  # the abstract supertype "application/vnd.foo.bar" where "application/vnd.foo.bar+json", "application/vnd.foo.bar+xml" etc exist
-  class WithGenericSerializationFormatSubtypes < Rack::REST::MediaType
-    def initialize(name, options, &block)
-      options[:abstract] = true
-      super
-      @generic_formats = options[:generic_formats] || GenericSerializationFormat::INSTANCES
-      @generic_format_subtypes = @generic_formats.map {|format| SerializationFormatSubtype.new(self, format)}
-    end
-
-    attr_reader :generic_formats, :generic_format_subtypes
-
-    def serialize_to_generic_ruby_data(rich_data)
-      raise "media type doesn't support deserialization"
-    end
-
-    def deserialize_from_generic_ruby_data(ruby_data)
-      raise "media type doesn't support deserialization"
-    end
-  end
-
-  # eg "application/vnd.foo.bar+json", which is to be considered a subtype both of "application/vnd.foo.bar" and "application/json",
-  # and whose serialization logic works in two phases: one phase translates between the wire format and generic ruby data structures
-  # the other between the generic data structures and richer application-specific ones
-  class SerializationFormatSubtype < Rack::REST::MediaType
-    def initialize(abstract_media_type, generic_format)
-      @abstract_media_type = abstract_media_type
-      @generic_format = generic_format
-      output_name = (@generic_format.output_name if @generic_format.subtypes_use_output_name?)
-      super("#{abstract_media_type.name}+#{generic_format.plus_suffix}", :supertypes => [abstract_media_type, generic_format], :output_name => output_name)
-    end
-
-    attr_reader :abstract_media_type, :generic_format
-
-    def serialize(rich_data)
-      ruby_data = @abstract_media_type.serialize_to_generic_ruby_data(rich_data)
-      @generic_format.serialize(ruby_data)
-    end
-
-    def deserialize(binary_data)
-      ruby_data = @generic_format.deserialize(binary_data)
-      @abstract_media_type.deserialize_from_generic_ruby_data(ruby_data)
-    end
+  def hash
+    name.hash
   end
 end

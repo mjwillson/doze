@@ -40,7 +40,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_custom_error_resource
     e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found')
     CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found', anything).returns(e).once
-    entity = Rack::REST::Entity.new_from_binary_data(Rack::REST::MediaType['text/html'], "foo bar baz")
+    entity = Rack::REST::Entity.new(Rack::REST::MediaType['text/html'], "foo bar baz")
     e.expects(:get).returns(entity).once
 
     root.expects(:exists?).returns(false).at_least_once

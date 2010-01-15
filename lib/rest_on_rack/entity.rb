@@ -1,25 +1,37 @@
 require 'digest/md5'
+
+# A simple wrapper class for an entity, which is essentially a lump of binary data
+# together with some metadata about it, most importantly a MediaType, but also
+# potentially a character encoding and a content language.
+#
+# A key feature is that the binary data may be specified lazily via a block.
+# This is so that content negotiation can demand the data only once it's decided
+# which (if any) of many proferred entities it wants to respond with.
+#
+# TODO: handle character encodings here in a nicer 1.9-compatible way
+# TODO: maybe allow a stream for lazy_binary_data too
 class Rack::REST::Entity
   DEFAULT_TEXT_ENCODING = 'iso-8859-1'
 
   attr_reader :binary_data, :media_type, :encoding, :language
 
-  def initialize(media_type, binary_data=nil, data=nil, options={})
+  class << self; alias :new_from_binary_data :new; end
+
+  def initialize(media_type, binary_data=nil, options={}, &lazy_binary_data)
     @binary_data = binary_data
-    @data = data
-    raise "must specify either binary_data or data or both" unless data || binary_data
+    @lazy_binary_data = lazy_binary_data
 
     @media_type = media_type
     @encoding   = options[:encoding] || (DEFAULT_TEXT_ENCODING if @media_type.major == 'text')
     @language   = options[:language]
   end
 
-  def self.new_from_binary_data(media_type, binary_data, options={})
-    new(media_type, binary_data, nil, options)
-  end
-
-  def self.new_from_data(media_type, data, options={})
-    new(media_type, nil, data, options)
+  def binary_data
+    @binary_data ||= if @lazy_binary_data
+      @lazy_binary_data.call
+    else
+      raise "must specify either binary_data or lazy_binary_data"
+    end
   end
 
   # This is a 'strong' etag in that it's sensitive to the exact bytes of the entity.
@@ -29,13 +41,5 @@ class Rack::REST::Entity
   #  May return nil. Default implementation is an MD5 digest of the entity data.
   def etag
     Digest::MD5.hexdigest(binary_data)
-  end
-
-  def binary_data
-    @binary_data ||= @media_type.serialize(@data)
-  end
-
-  def data
-    @data ||= @media_type.deserialize(@binary_data)
   end
 end

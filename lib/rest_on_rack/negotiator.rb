@@ -22,7 +22,7 @@ class Rack::REST::Negotiator
   end
 
   def media_type_quality(media_type)
-    @media_type_criterea.each {|matcher,specificity,quality| return quality if media_type.all_applicable_names.any? {|name| matcher === name}}; 0
+    @media_type_criterea.each {|matcher,specificity,quality| return quality if media_type.matches_names.any? {|name| matcher === name}}; 0
   end
 
   def language_quality(language)

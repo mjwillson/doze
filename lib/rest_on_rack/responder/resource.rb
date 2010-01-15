@@ -176,7 +176,7 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
   def not_all_equal?(collection)
     first = collection.first
-    !collection.all? {|x| x == first}
+    collection.any? {|x| x != first}
   end
 
   def add_caching_headers(response)

@@ -4,8 +4,6 @@ require 'test/unit'
 require 'rack/test'
 require 'mocha'
 
-Rack::REST::MediaType.new('text/html')
-
 class Rack::REST::MockResource
   include Rack::REST::Resource
 
@@ -17,7 +15,7 @@ class Rack::REST::MockResource
   end
 
   def get
-    Rack::REST::Entity.new_from_binary_data(Rack::REST::MediaType['text/html'], @binary_data)
+    Rack::REST::Entity.new(Rack::REST::MediaType['text/html'], @binary_data)
   end
 end
 
@@ -72,7 +70,7 @@ module Rack::REST::TestCase
 
   def mock_entity(binary_data, media_type='text/html', language=nil)
     media_type = Rack::REST::MediaType[media_type] if media_type.is_a?(String)
-    Rack::REST::Entity.new_from_binary_data(media_type, binary_data, :language => language)
+    Rack::REST::Entity.new(media_type, binary_data, :language => language)
   end
 
   def mock_resource(*p); Rack::REST::MockResource.new(*p); end
@@ -119,17 +117,13 @@ end
 # To be used for any test that defines new media types - cleans them up afterwards in the registry
 module Rack::REST::MediaTypeTestCase
   def setup
-    @alias_lookup = Rack::REST::MediaType::ALIAS_LOOKUP.dup
-    @instances = Rack::REST::MediaType::GenericSerializationFormat::INSTANCES.dup
-    @by_plus_suffix = Rack::REST::MediaType::GenericSerializationFormat::BY_PLUS_SUFFIX.dup
+    @media_type_name_lookup = Rack::REST::MediaType::NAME_LOOKUP.dup
     super
   end
 
   def teardown
     $VERBOSE = nil
-    Rack::REST::MediaType.const_set('ALIAS_LOOKUP', @alias_lookup)
-    Rack::REST::MediaType::GenericSerializationFormat.const_set('INSTANCES', @instances)
-    Rack::REST::MediaType::GenericSerializationFormat.const_set('BY_PLUS_SUFFIX', @by_plus_suffix)
+    Rack::REST::MediaType.const_set('NAME_LOOKUP', @media_type_name_lookup)
     $VERBOSE = false
     super
   end

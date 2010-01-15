@@ -25,13 +25,15 @@ class Rack::REST::Request < Rack::Request
       while (result = body.read(4096))
         @data << result
       end
-      Rack::REST::Entity.new_from_binary_data(media_type, @data, :encoding => content_charset) unless @data.empty?
+      media_type.new_entity_from_binary_data(@data, :encoding => content_charset) unless @data.empty?
     end
   end
 
   def media_type
-    mt = super or return
-    Rack::REST::MediaType[mt] or raise Rack::REST::Error.new(Rack::REST::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
+    @mt ||= begin
+      mt = super or return
+      Rack::REST::MediaType[mt] or raise Rack::REST::Error.new(Rack::REST::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
+    end
   end
 
   # For now, to do authentication you need some (rack) middleware that sets one of these env's.

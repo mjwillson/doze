@@ -1,6 +1,6 @@
 module Rack::REST::Collection::Object
 
-  include Rack::REST::Resource::Serializable
+  include Rack::REST::Serialization::Resource
 
   def get_data
   end

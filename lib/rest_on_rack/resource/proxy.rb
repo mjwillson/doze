@@ -56,13 +56,3 @@ class Rack::REST::Resource::Proxy
     module_eval("def #{method}(*args, &block); @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
   end
 end
-
-require 'rest_on_rack/resource/serializable'
-class Rack::REST::Resource::SerializableProxy < Rack::REST::Resource::Proxy
-  include Rack::REST::Resource::Serializable
-
-  proxied_methods = Rack::REST::Resource::Serializable.public_instance_methods(true) - ['get', 'put', 'post'] - self.public_instance_methods(false)
-  proxied_methods.each do |method|
-    module_eval("def #{method}(*args, &block); @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
-  end
-end
