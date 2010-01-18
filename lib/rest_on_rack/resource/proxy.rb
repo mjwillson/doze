@@ -4,6 +4,9 @@
 # Also note it only proxies the Resource interface, and doesn't do any method_missing magic to proxy additional methods
 # on the underlying instance. If you need this you can access the target of the proxy with #target, or use 'try',
 # which has been overridden sensibly.
+#
+# Also note the proxy is designed to do the sensible default with a nil target, however do make sure it's doing what
+# you want it to do if using with a nil target
 require 'rest_on_rack/resource'
 class Rack::REST::Resource::Proxy
   include Rack::REST::Resource
@@ -21,7 +24,7 @@ class Rack::REST::Resource::Proxy
     if respond_to?(method)
       send(method, *args, &block)
     elsif @target.respond_to?(method)
-      @target.send(method, *args, &block)
+      @target && @target.send(method, *args, &block)
     end
   end
 
@@ -30,7 +33,7 @@ class Rack::REST::Resource::Proxy
     if respond_to?(supports_method)
       send(supports_method)
     else
-      @target.supports_method?(method)
+      @target && @target.supports_method?(method)
     end
   end
 
@@ -38,7 +41,7 @@ class Rack::REST::Resource::Proxy
     if respond_to?(method_name)
       send(method_name, entity)
     else
-      @target.other_method(method_name, entity)
+      @target && @target.other_method(method_name, entity)
     end
   end
 
@@ -47,12 +50,20 @@ class Rack::REST::Resource::Proxy
     if respond_to?(method_name)
       send(method_name, resource_method, entity)
     else
-      @target.accepts_method_with_media_type?(resource_method, entity)
+      @target && @target.accepts_method_with_media_type?(resource_method, entity)
     end
   end
 
+  # Some methods which should return something other than nil by default for an empty target:
+
+  def authorize(user, method)
+    @target ? @target.authorize(user, method) : true
+  end
+
+  # Other methods which we can proxy generically
+
   proxied_methods = Rack::REST::Resource.public_instance_methods(true) - ['uri', 'uri_object', 'uri_without_trailing_slash'] - self.public_instance_methods(false)
   proxied_methods.each do |method|
-    module_eval("def #{method}(*args, &block); @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
+    module_eval("def #{method}(*args, &block); @target && @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
   end
 end
