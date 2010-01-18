@@ -10,7 +10,11 @@ class Rack::REST::Responder::Error < Rack::REST::Responder
   def response
     response = Rack::REST::Response.new
     if @app.config[:error_resource_class]
-      extras = @app.config[:expose_exception_details] ? {:backtrace => @error.backtrace} : {}
+      extras = if @app.config[:expose_exception_details] && @error.http_status >= 500
+        {:backtrace => @error.backtrace}
+      else
+        {}
+      end
       resource = @app.config[:error_resource_class].new(@error.http_status, @error.message, extras)
       # we can't have it going STATUS_NOT_ACCEPTABLE in the middle of trying to return an error resource, so :ignore_unacceptable_accepts
       responder = Rack::REST::Responder::Resource.new(@app, @request, resource, :ignore_unacceptable_accepts => true)
