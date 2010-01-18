@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class RouterInterfaceTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   # tests how the basic Router interface is exposed by the framework
 
@@ -42,7 +42,7 @@ class RouterInterfaceTest < Test::Unit::TestCase
   def test_router_match_router_resource_with_trailing_then_resource
     # as above but this time our second router is also a resource - check that it does actually act as a router
 
-    second_router = mock_router(Rack::REST::MockResource)
+    second_router = mock_router(Doze::MockResource)
     resource = mock_resource('/foo/bar')
 
     root_router.expects(:route).with('/foo/bar', :get, '').returns([second_router, '/foo', '/bar']).once
@@ -54,7 +54,7 @@ class RouterInterfaceTest < Test::Unit::TestCase
   end
 
   def test_router_match_router_resource_with_no_trailing
-    resource = mock_router(Rack::REST::MockResource)
+    resource = mock_router(Doze::MockResource)
 
     root_router.expects(:route).with('/foo', :get, '').returns([resource, '/foo', nil]).once
     resource.expects(:route).never
@@ -66,8 +66,8 @@ end
 
 
 class RouterDefaultImplementationTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   # tests the default implementation of Router based on routes defined in class method helpers
 
@@ -89,7 +89,7 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
   def test_route_with_params_to_block_returning_resource
     root_router do
       route('/foo/{x}/{y}') do |uri, params|
-        Rack::REST::MockResource.new(uri, [uri, params].inspect)
+        Doze::MockResource.new(uri, [uri, params].inspect)
       end
     end
 
@@ -105,9 +105,9 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
       route('/foo/{x}') do |uri1, params1|
 
         Class.new do
-          include Rack::REST::Router
+          include Doze::Router
           route("/{y}") do |uri2, params2|
-            Rack::REST::MockResource.new(uri2, [uri1, params1, uri2, params2].inspect)
+            Doze::MockResource.new(uri2, [uri1, params1, uri2, params2].inspect)
           end
         end.new
       end
@@ -124,7 +124,7 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
   def test_route_with_special_param_regexp
     root_router do
       route('/foo/{x}', :regexps => {:x => /\d+/}) do |uri, params|
-        Rack::REST::MockResource.new(uri, params[:x])
+        Doze::MockResource.new(uri, params[:x])
       end
     end
 
@@ -135,8 +135,8 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
 
   def test_route_with_uri_template_passed_directly
     root_router do
-      route(Rack::REST::URITemplate.compile('/foo/{x}', :x => /\d+/)) do |uri, params|
-        Rack::REST::MockResource.new(uri, params[:x])
+      route(Doze::URITemplate.compile('/foo/{x}', :x => /\d+/)) do |uri, params|
+        Doze::MockResource.new(uri, params[:x])
       end
     end
 

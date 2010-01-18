@@ -1,9 +1,9 @@
-require 'rest_on_rack/media_type'
-require 'rest_on_rack/serialization/entity'
-require 'rest_on_rack/error'
-require 'rest_on_rack/utils'
+require 'doze/media_type'
+require 'doze/serialization/entity'
+require 'doze/error'
+require 'doze/utils'
 
-module Rack::REST::Serialization
+module Doze::Serialization
   # ripped off largely from Merb::Parse
   # Supports PHP-style nested hashes via foo[bar][baz]=boz
   class Entity::WWWFormEncoded < Entity
@@ -69,7 +69,7 @@ module Rack::REST::Serialization
     end
   end
 
-  # A browser-friendly media type for use with Rack::REST::Serialization::Resource.
-  WWW_FORM_ENCODED = Rack::REST::MediaType.register('application/x-www-form-urlencoded', :entity_class => Entity::WWWFormEncoded)
+  # A browser-friendly media type for use with Doze::Serialization::Resource.
+  WWW_FORM_ENCODED = Doze::MediaType.register('application/x-www-form-urlencoded', :entity_class => Entity::WWWFormEncoded)
 end
 

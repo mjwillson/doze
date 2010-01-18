@@ -1,7 +1,7 @@
 require 'functional/base'
 
 class CustomErrorResource
-  include Rack::REST::Resource
+  include Doze::Resource
   def initialize(status, message, extras={})
     @status = status; @message = message
   end
@@ -11,8 +11,8 @@ class FooException < StandardError
 end
 
 class ErrorHandlingTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def test_default_error_resource
     root.expects(:exists?).returns(false).at_least_once
@@ -40,7 +40,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_custom_error_resource
     e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found')
     CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found', anything).returns(e).once
-    entity = Rack::REST::Entity.new(Rack::REST::MediaType['text/html'], "foo bar baz")
+    entity = Doze::Entity.new(Doze::MediaType['text/html'], "foo bar baz")
     e.expects(:get).returns(entity).once
 
     root.expects(:exists?).returns(false).at_least_once
@@ -62,7 +62,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_exception_caught_from_resource_code
-    app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => true)
+    app(:error_resource_class => Doze::Resource::Error, :catch_application_errors => true)
 
     root.expects(:get).raises(RuntimeError, 'Oi!')
     get
@@ -71,7 +71,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   end
 
   def test_exception_not_caught_from_resource_code
-    app(:error_resource_class => Rack::REST::Resource::Error, :catch_application_errors => false)
+    app(:error_resource_class => Doze::Resource::Error, :catch_application_errors => false)
 
     root.expects(:get).raises(FooException, 'Oi!')
     assert_raise(FooException) {get}

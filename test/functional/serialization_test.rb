@@ -1,13 +1,13 @@
 require 'functional/base'
-require 'rest_on_rack/serialization/resource'
+require 'doze/serialization/resource'
 
 class SerializationTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
-  include Rack::REST::MediaTypeTestCase
+  include Doze::Utils
+  include Doze::TestCase
+  include Doze::MediaTypeTestCase
 
   def setup
-    root.extend(Rack::REST::Serialization::Resource)
+    root.extend(Doze::Serialization::Resource)
     @ruby_data = ['some', 123, 'ruby data']
     super
   end
@@ -33,20 +33,20 @@ class SerializationTest < Test::Unit::TestCase
     root.stubs(:supports_put?).returns(true)
     root.stubs(:accepts_put_with_media_type?).returns(true)
 
-    root.expects(:put).raises(Rack::REST::ClientResourceError, "semantic problem with submitted data").once
+    root.expects(:put).raises(Doze::ClientResourceError, "semantic problem with submitted data").once
     put('CONTENT_TYPE' => 'application/json', :input => '{"foo":"bar"}')
     assert_equal STATUS_UNPROCESSABLE_ENTITY, last_response.status
     assert_match /semantic/i, last_response.body
   end
 
   def test_json_serialization
-    media_type = Rack::REST::Serialization::JSON
+    media_type = Doze::Serialization::JSON
     entity = media_type.entity_class.new_from_object_data(media_type, {'foo' => 'bar'})
     assert_equal '{"foo":"bar"}', entity.binary_data
   end
 
   def test_form_encoding_serialization
-    media_type = Rack::REST::Serialization::WWW_FORM_ENCODED
+    media_type = Doze::Serialization::WWW_FORM_ENCODED
     entity = media_type.entity_class.new_from_object_data(media_type, {'foo' => {'bar' => '='}, 'baz' => '3'})
     assert ['foo[bar]=%3D&baz=3', 'baz=3&foo[bar]=%3D'].include?(entity.binary_data)
   end
@@ -95,14 +95,14 @@ class SerializationTest < Test::Unit::TestCase
   end
 
   def test_derived_type
-    json_subtype = Rack::REST::Serialization::JSON.register_derived_type('application/vnd.foo.bar')
+    json_subtype = Doze::Serialization::JSON.register_derived_type('application/vnd.foo.bar')
 
     assert_equal "application/vnd.foo.bar+json", json_subtype.name
     assert json_subtype.matches_names.include?("application/json")
   end
 
   def test_get_derived_type_via_generic_accept
-    derived_media_types = [Rack::REST::Serialization::JSON, Rack::REST::Serialization::YAML].map {|x| x.register_derived_type('application/vnd.foo.bar')}
+    derived_media_types = [Doze::Serialization::JSON, Doze::Serialization::YAML].map {|x| x.register_derived_type('application/vnd.foo.bar')}
 
     root.expects(:get_data).returns(@ruby_data).twice
     root.expects(:serialization_media_types).returns(derived_media_types).twice

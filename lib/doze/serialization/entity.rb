@@ -1,7 +1,7 @@
-require 'rest_on_rack/entity'
+require 'doze/entity'
 
-module Rack::REST::Serialization
-  class Entity < Rack::REST::Entity
+module Doze::Serialization
+  class Entity < Doze::Entity
     def self.new_from_binary_data(media_type, binary_data, options={})
       new(media_type, binary_data, nil, options={})
     end

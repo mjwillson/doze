@@ -1,4 +1,4 @@
-class Rack::REST::MediaType
+class Doze::MediaType
   NAME_LOOKUP = {}
 
   # Names for this media type.
@@ -21,7 +21,7 @@ class Rack::REST::MediaType
     @output_name || @names.first
   end
 
-  # Media types may be configured to use a different entity class to the default (Rack::REST::Entity) for an
+  # Media types may be configured to use a different entity class to the default (Doze::Entity) for an
   # entity of that media type
   attr_reader :entity_class
 
@@ -69,7 +69,7 @@ class Rack::REST::MediaType
     @matches_names.push(*options[:also_matches]) if options[:also_matches]
     @matches_names.uniq!
 
-    @entity_class = options[:entity_class] || Rack::REST::Entity
+    @entity_class = options[:entity_class] || Doze::Entity
     @plus_suffix = options[:plus_suffix]
   end
 
@@ -103,7 +103,7 @@ class Rack::REST::MediaType
 
   # Equality override to help in case multiple temporary instances of a media type of a given name are compared.
   def ==(other)
-    super || (other.is_a?(Rack::REST::MediaType) && other.name == name)
+    super || (other.is_a?(Doze::MediaType) && other.name == name)
   end
 
   alias :eql? :==

@@ -1,8 +1,8 @@
-require 'rest_on_rack/error'
-require 'rest_on_rack/utils'
+require 'doze/error'
+require 'doze/utils'
 
 # Some helpers for Rack::Request
-class Rack::REST::Request < Rack::Request
+class Doze::Request < Rack::Request
   # this delibarately ignores the HEAD vs GET distinction; use head? to check
   def normalized_request_method
     method = @env["REQUEST_METHOD"]
@@ -32,7 +32,7 @@ class Rack::REST::Request < Rack::Request
   def media_type
     @mt ||= begin
       mt = super or return
-      Rack::REST::MediaType[mt] or raise Rack::REST::Error.new(Rack::REST::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
+      Doze::MediaType[mt] or raise Doze::Error.new(Doze::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
     end
   end
 

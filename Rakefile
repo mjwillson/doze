@@ -36,7 +36,7 @@ end
 desc 'Generate RDoc'
 Rake::RDocTask.new('rdoc') do |task|
   task.main = 'README'
-  task.title = "Rest on Rack"
+  task.title = "Doze"
   task.rdoc_dir = 'doc'
   task.rdoc_files = FileList['lib/**/*.rb'].include('README')
 end
@@ -47,8 +47,8 @@ task 'generate_docs' => ['clobber_rdoc', 'rdoc']
 Gem.manage_gems if Gem::RubyGemsVersion < '1.2.0'
 
 spec = Gem::Specification.new do |s|
-  s.name   = "rest_on_rack"
-  s.summary = "RESTful resource interface ontop of Rack"
+  s.name   = "doze"
+  s.summary = "RESTful resource-oriented API framework"
   s.version = '0.0.1'
   s.platform = Gem::Platform::RUBY
   s.author = 'Matthew Willson'
@@ -61,16 +61,16 @@ spec = Gem::Specification.new do |s|
 
   s.has_rdoc = true
   s.extra_rdoc_files = ['README']
-  s.rdoc_options << '--title' << 'REST on Rack' << '--main' << 'README' << '--line-numbers'
+  s.rdoc_options << '--title' << 'Doze' << '--main' << 'README' << '--line-numbers'
   s.files = FileList['{lib,test}/**/*.rb', '[A-Z]*'].exclude('TODO').to_a
 end
 
 Rake::GemPackageTask.new(spec) do |package|
-   package.need_zip = true
-   package.need_tar = true
+  package.need_zip = true
+  package.need_tar = true
 end
 
 desc 'Generate gemspec file for github.'
 task :update_gemspec do
-  File.open('rest_on_rack.gemspec', 'w') {|output| output << spec.to_ruby}
+  File.open('doze.gemspec', 'w') {|output| output << spec.to_ruby}
 end

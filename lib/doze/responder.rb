@@ -1,5 +1,5 @@
-class Rack::REST::Responder
-  include Rack::REST::Utils
+class Doze::Responder
+  include Doze::Utils
 
   attr_reader :response, :request
 
@@ -17,21 +17,21 @@ class Rack::REST::Responder
 
   # for use within #response
   def raise_error(status=STATUS_INTERNAL_SERVER_ERROR, message=nil, headers={})
-    raise Rack::REST::Error.new(status, message, headers)
+    raise Doze::Error.new(status, message, headers)
   end
 
   def error_response(status=STATUS_INTERNAL_SERVER_ERROR, message=nil, headers={}, backtrace=nil)
-    error_response_from_error(Rack::REST::Error.new(status, message, headers, backtrace))
+    error_response_from_error(Doze::Error.new(status, message, headers, backtrace))
   end
 
   def error_response_from_error(error)
-    Rack::REST::Responder::Error.new(@app, @request, error).response
+    Doze::Responder::Error.new(@app, @request, error).response
   end
 
   def call
     begin
       response.finish
-    rescue Rack::REST::Error => error
+    rescue Doze::Error => error
       error_response_from_error(error).finish
     rescue => exception
       raise unless @app.config[:catch_application_errors]

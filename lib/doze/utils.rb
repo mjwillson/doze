@@ -1,5 +1,5 @@
 # Various stateless utility functions which aid the conversion back and forth between HTTP syntax and the more abstracted ruby representations we use.
-module Rack::REST::Utils
+module Doze::Utils
   # Strictly this is a WebDAV extension but very useful in the wider HTTP context
   # see http://tools.ietf.org/html/rfc4918#section-11.2
   Rack::Utils::HTTP_STATUS_CODES[422] = 'Unprocessable entity'
@@ -29,6 +29,6 @@ module Rack::REST::Utils
     '"' << str.gsub(/[\\\"]/o, "\\\1") << '"'
   end
 
-  # So utility functions are accessible as Rack::REST::Utils.foo as well as via including the module
+  # So utility functions are accessible as Doze::Utils.foo as well as via including the module
   extend self
 end

@@ -1,5 +1,5 @@
-class Rack::REST::Responder::Resource < Rack::REST::Responder
-  include Rack::REST::Utils
+class Doze::Responder::Resource < Doze::Responder
+  include Doze::Utils
 
   attr_reader :resource, :options
 
@@ -14,7 +14,7 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
   def response
     if @request.options?
-      Rack::REST::Response.new(STATUS_NO_CONTENT, allow_header)
+      Doze::Response.new(STATUS_NO_CONTENT, allow_header)
     elsif !@resource.supports_method?(recognized_method)
       error_response(STATUS_METHOD_NOT_ALLOWED, nil, allow_header)
     else
@@ -71,11 +71,11 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
     when :put
       result = @resource.put(entity)
-      Rack::REST::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
+      Doze::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
 
     when :delete
       result = @resource.delete if existed_before
-      Rack::REST::Response.new_empty
+      Doze::Response.new_empty
 
     else
       result = @resource.other_method(recognized_method, entity)
@@ -115,12 +115,12 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
       # although technically an HTTP error response, we don't use error_response (and an error resource)
       # to send STATUS_PRECONDITION_FAILED, since the precondition check was something the client specifically
       # requested, so we assume they don't need a special error resource to make sense of it.
-      Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
+      Doze::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
     elsif (if_modified_since && last_modified <= Time.httpdate(if_modified_since))
       if request.get_or_head?
-        Rack::REST::Response.new(STATUS_NOT_MODIFIED, 'Last-Modified' => last_modified.httpdate)
+        Doze::Response.new(STATUS_NOT_MODIFIED, 'Last-Modified' => last_modified.httpdate)
       else
-        Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
+        Doze::Response.new(STATUS_PRECONDITION_FAILED, 'Last-Modified' => last_modified.httpdate)
       end
     end
   end
@@ -137,18 +137,18 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
     return unless if_match || if_none_match
 
     entity ||= get_preferred_representation
-    return unless entity.is_a?(Rack::REST::Entity)
+    return unless entity.is_a?(Doze::Entity)
 
     etag = entity.etag
 
     # etag membership test is kinda crude at present, really we should parse the separate quoted etags out.
     if (if_match      && if_match != '*' &&      !(etag && if_match.include?(quote(etag))))
-      Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
+      Doze::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
     elsif (if_none_match && (if_none_match == '*' || (etag && if_none_match.include?(quote(etag)))))
       if @request.get_or_head?
-        Rack::REST::Response.new(STATUS_NOT_MODIFIED, 'Etag' => quote(etag))
+        Doze::Response.new(STATUS_NOT_MODIFIED, 'Etag' => quote(etag))
       else
-        Rack::REST::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
+        Doze::Response.new(STATUS_PRECONDITION_FAILED, 'Etag' => quote(etag))
       end
     end
   end
@@ -160,10 +160,10 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
   def get_preferred_representation(response=nil)
     get_result = @resource.get or return
-    return get_result if get_result.is_a?(Rack::REST::Resource) || get_result.nil?
+    return get_result if get_result.is_a?(Doze::Resource) || get_result.nil?
 
     *representations = *get_result
-    negotiator = Rack::REST::Negotiator.new(@request, @options[:ignore_unacceptable_accepts])
+    negotiator = Doze::Negotiator.new(@request, @options[:ignore_unacceptable_accepts])
 
     if response
       # If the available representation entities differ by media type, add a Vary: Accept. similarly for language.
@@ -205,13 +205,13 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
   end
 
   def make_representation_of_resource_response
-    response = Rack::REST::Response.new
+    response = Doze::Response.new
     representation = get_preferred_representation(response)
     case representation
-    when Rack::REST::Resource
+    when Doze::Resource
       raise 'Resource representation must have a uri' unless representation.uri
       response.set_redirect(representation, @request)
-    when Rack::REST::Entity
+    when Doze::Entity
       # preconditions on the representation only apply to the content that would be served up by a GET
       fail_response = @request.get_or_head? && entity_preconditions_fail_response(representation)
       response = fail_response || begin
@@ -226,16 +226,16 @@ class Rack::REST::Responder::Resource < Rack::REST::Responder
 
   def make_general_result_response(result, status_for_resource_redirect_result=STATUS_SEE_OTHER)
     case result
-    when Rack::REST::Resource
+    when Doze::Resource
       if result.uri
-        Rack::REST::Response.new_redirect(result, @request, status_for_resource_redirect_result)
+        Doze::Response.new_redirect(result, @request, status_for_resource_redirect_result)
       else
-        Rack::REST::Responder::Resource.new(@app, @request, result, @options).make_representation_of_resource_response
+        Doze::Responder::Resource.new(@app, @request, result, @options).make_representation_of_resource_response
       end
-    when Rack::REST::Entity
-      Rack::REST::Response.new_from_entity(result)
+    when Doze::Entity
+      Doze::Response.new_from_entity(result)
     when nil
-      Rack::REST::Response.new_empty
+      Doze::Response.new_empty
     end
   end
 end

@@ -1,19 +1,19 @@
 require 'functional/base'
 
 class NonGetMethodTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
-  include Rack::REST::MediaTypeTestCase
+  include Doze::Utils
+  include Doze::TestCase
+  include Doze::MediaTypeTestCase
 
   def setup
     super
-    @foo = Rack::REST::MediaType.new('text/foo')
-    @bar = Rack::REST::MediaType.new('text/bar')
+    @foo = Doze::MediaType.new('text/foo')
+    @bar = Doze::MediaType.new('text/bar')
   end
 
   def test_put_with_unacceptable_media_type
     root.expects(:supports_put?).returns(true)
-    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(false)
+    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(false)
     root.expects(:put).never
     put('CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
@@ -21,9 +21,9 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_put
     root.expects(:supports_put?).returns(true)
-    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     root.expects(:put).with do |value|
-      value.is_a?(Rack::REST::Entity) and
+      value.is_a?(Doze::Entity) and
       value.binary_data == 'foo' and value.media_type == @foo and value.encoding == 'foobar'
     end.returns(nil).once
 
@@ -34,7 +34,7 @@ class NonGetMethodTest < Test::Unit::TestCase
   def test_put_where_not_exists
     root.expects(:exists?).returns(false)
     root.expects(:supports_put?).returns(true)
-    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     root.expects(:put).returns(nil).once
 
     put('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foo')
@@ -43,7 +43,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_post_with_unacceptable_media_type
     root.expects(:supports_post?).returns(true)
-    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(false)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(false)
     root.expects(:post).never
     post('CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
@@ -51,10 +51,10 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_post_returning_created_resource
     root.expects(:supports_post?).returns(true)
-    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     created = mock_resource('/uri')
     root.expects(:post).with do |value|
-      value.is_a?(Rack::REST::Entity) and
+      value.is_a?(Doze::Entity) and
       value.binary_data == 'foob' and value.media_type == @foo and value.encoding == 'foobar'
     end.returns(created).once
 
@@ -65,7 +65,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_post_returning_nothing
     root.expects(:supports_post?).returns(true)
-    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     root.expects(:post).returns(nil).once
 
     post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
@@ -74,7 +74,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_post_returning_entity
     root.expects(:supports_post?).returns(true)
-    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     root.expects(:post).returns(mock_entity('bar', @bar)).once
 
     post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
@@ -85,7 +85,7 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_post_returning_anonymous_resource
     root.expects(:supports_post?).returns(true)
-    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     resource = mock_resource(nil)
     resource.expects(:get).returns(mock_entity('bar', @bar))
     root.expects(:post).returns(resource).once
@@ -111,9 +111,9 @@ class NonGetMethodTest < Test::Unit::TestCase
     app(:recognized_methods => [:get,:post,:put,:delete,:patch])
 
     root.expects(:supports_patch?).returns(true)
-    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     root.expects(:patch).with do |value|
-      value.is_a?(Rack::REST::Entity) and
+      value.is_a?(Doze::Entity) and
       value.binary_data == 'foob' and value.media_type == @foo and value.encoding == 'foobar'
     end.returns(nil).once
 
@@ -126,7 +126,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     app(:recognized_methods => [:get,:post,:put,:delete,:patch])
 
     root.expects(:supports_patch?).returns(true)
-    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     resource = mock_resource(nil)
     resource.expects(:get).returns(mock_entity('bar', @bar))
     root.expects(:patch).returns(resource).once
@@ -142,7 +142,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     app(:recognized_methods => [:get,:post,:put,:delete,:patch])
 
     root.expects(:supports_patch?).returns(true)
-    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Rack::REST::Entity) && a.media_type == @foo}.returns(true)
+    root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
     resource = mock_resource('/foo')
     resource.expects(:get).never
     root.expects(:patch).returns(resource).once

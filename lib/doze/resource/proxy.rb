@@ -1,15 +1,15 @@
 # A proxy wrapper for a resource instance, which allows you to proxy through to its resource functionality
 # while potentially overriding some of it with context-sensitive behaviour.
-# Unlike the proxies in the stdlib's 'delegate' library, this will satisfy is_a?(Rack::REST::Resource) for the proxy instance.
+# Unlike the proxies in the stdlib's 'delegate' library, this will satisfy is_a?(Doze::Resource) for the proxy instance.
 # Also note it only proxies the Resource interface, and doesn't do any method_missing magic to proxy additional methods
 # on the underlying instance. If you need this you can access the target of the proxy with #target, or use 'try',
 # which has been overridden sensibly.
 #
 # Also note the proxy is designed to do the sensible default with a nil target, however do make sure it's doing what
 # you want it to do if using with a nil target
-require 'rest_on_rack/resource'
-class Rack::REST::Resource::Proxy
-  include Rack::REST::Resource
+require 'doze/resource'
+class Doze::Resource::Proxy
+  include Doze::Resource
 
   def initialize(uri, target)
     @uri = uri
@@ -62,7 +62,7 @@ class Rack::REST::Resource::Proxy
 
   # Other methods which we can proxy generically
 
-  proxied_methods = Rack::REST::Resource.public_instance_methods(true) - ['uri', 'uri_object', 'uri_without_trailing_slash'] - self.public_instance_methods(false)
+  proxied_methods = Doze::Resource.public_instance_methods(true) - ['uri', 'uri_object', 'uri_without_trailing_slash'] - self.public_instance_methods(false)
   proxied_methods.each do |method|
     module_eval("def #{method}(*args, &block); @target && @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
   end

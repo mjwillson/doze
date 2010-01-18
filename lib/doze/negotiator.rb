@@ -1,6 +1,6 @@
 # A negotiator is passed to a resource on behalf of a request, and will choose the entity it prefers from options offered to it by the resource.
 # You can ask it to give you a quality value, or to choose from a list of options. It'll choose from media_types, languages, or combinations of the two.
-class Rack::REST::Negotiator
+class Doze::Negotiator
   def initialize(request, ignore_unacceptable_accepts=false)
     accept_header = request.env['HTTP_ACCEPT']
     @ignore_unacceptable_accepts = ignore_unacceptable_accepts
@@ -34,7 +34,7 @@ class Rack::REST::Negotiator
     media_type_quality(media_type)*language_quality(language)
   end
 
-  # Choose from a list of Rack::REST::Entity
+  # Choose from a list of Doze::Entity
   def choose_entity(entities)
     max_by_non_zero(entities) {|a| quality(a.media_type, a.language)}
   end

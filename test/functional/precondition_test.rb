@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class PreconditionTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def setup
     @last_modified = Time.now - 30
@@ -41,8 +41,8 @@ class PreconditionTest < Test::Unit::TestCase
 end
 
 class EntityPreconditionTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def setup
     @last_modified = Time.now - 30

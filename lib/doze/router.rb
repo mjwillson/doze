@@ -1,4 +1,4 @@
-module Rack::REST::Router
+module Doze::Router
 
   def self.included(klass)
     klass.extend(ClassMethods)
@@ -108,7 +108,7 @@ module Rack::REST::Router
     #   def route_bar(base_uri, match); ... ;end
     #
     def route(template, options={}, &block)
-      template = Rack::REST::URITemplate.compile(template, options[:regexps] || {}) unless template.is_a?(Rack::REST::URITemplate)
+      template = Doze::URITemplate.compile(template, options[:regexps] || {}) unless template.is_a?(Doze::URITemplate)
       options[:template] = template
 
       route_method_name = "route_#{options[:name] || routes.length}"

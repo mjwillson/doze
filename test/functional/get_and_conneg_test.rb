@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class GetAndConnegTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def setup
     @entities = [

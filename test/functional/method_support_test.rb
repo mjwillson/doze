@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class MethodSupportTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def test_unrecognized_method
     app(:recognized_methods => [:get,:put,:post,:delete])

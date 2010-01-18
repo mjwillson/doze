@@ -1,11 +1,11 @@
-require 'rest_on_rack'
-require 'rest_on_rack/media_type'
+require 'doze'
+require 'doze/media_type'
 require 'test/unit'
 require 'rack/test'
 require 'mocha'
 
-class Rack::REST::MockResource
-  include Rack::REST::Resource
+class Doze::MockResource
+  include Doze::Resource
 
   attr_reader :extra_params, :data
 
@@ -15,23 +15,23 @@ class Rack::REST::MockResource
   end
 
   def get
-    Rack::REST::Entity.new(Rack::REST::MediaType['text/html'], @binary_data)
+    Doze::Entity.new(Doze::MediaType['text/html'], @binary_data)
   end
 end
 
-module Rack::REST::TestCase
+module Doze::TestCase
   include Rack::Test::Methods
 
   TEST_CONFIG = {:catch_application_errors => false}
 
   def app(config={})
-    @app ||= Rack::REST::Application.new(root, TEST_CONFIG.merge(config))
+    @app ||= Doze::Application.new(root, TEST_CONFIG.merge(config))
   end
 
   attr_writer :root
 
   def root
-    @root ||= Rack::REST::MockResource.new("/")
+    @root ||= Doze::MockResource.new("/")
   end
 
   def root_router(&b)
@@ -69,15 +69,15 @@ module Rack::REST::TestCase
   end
 
   def mock_entity(binary_data, media_type='text/html', language=nil)
-    media_type = Rack::REST::MediaType[media_type] if media_type.is_a?(String)
-    Rack::REST::Entity.new(media_type, binary_data, :language => language)
+    media_type = Doze::MediaType[media_type] if media_type.is_a?(String)
+    Doze::Entity.new(media_type, binary_data, :language => language)
   end
 
-  def mock_resource(*p); Rack::REST::MockResource.new(*p); end
+  def mock_resource(*p); Doze::MockResource.new(*p); end
 
   def mock_router(superclass = Object, &block)
     klass = Class.new(superclass)
-    klass.send(:include, Rack::REST::Router)
+    klass.send(:include, Doze::Router)
     klass.class_eval(&block) if block
     klass.new
   end
@@ -115,15 +115,15 @@ module Rack::REST::TestCase
 end
 
 # To be used for any test that defines new media types - cleans them up afterwards in the registry
-module Rack::REST::MediaTypeTestCase
+module Doze::MediaTypeTestCase
   def setup
-    @media_type_name_lookup = Rack::REST::MediaType::NAME_LOOKUP.dup
+    @media_type_name_lookup = Doze::MediaType::NAME_LOOKUP.dup
     super
   end
 
   def teardown
     $VERBOSE = nil
-    Rack::REST::MediaType.const_set('NAME_LOOKUP', @media_type_name_lookup)
+    Doze::MediaType.const_set('NAME_LOOKUP', @media_type_name_lookup)
     $VERBOSE = false
     super
   end

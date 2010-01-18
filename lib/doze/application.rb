@@ -1,26 +1,26 @@
 require 'time' # httpdate
-require 'rest_on_rack/utils'
-require 'rest_on_rack/error'
-require 'rest_on_rack/uri_template'
-require 'rest_on_rack/request'
-require 'rest_on_rack/router'
-require 'rest_on_rack/resource'
-require 'rest_on_rack/entity'
-require 'rest_on_rack/resource/error'
-require 'rest_on_rack/resource/proxy'
-require 'rest_on_rack/request'
-require 'rest_on_rack/response'
-require 'rest_on_rack/responder'
-require 'rest_on_rack/responder/main'
-require 'rest_on_rack/responder/error'
-require 'rest_on_rack/responder/resource'
-require 'rest_on_rack/negotiator'
+require 'doze/utils'
+require 'doze/error'
+require 'doze/uri_template'
+require 'doze/request'
+require 'doze/router'
+require 'doze/resource'
+require 'doze/entity'
+require 'doze/resource/error'
+require 'doze/resource/proxy'
+require 'doze/request'
+require 'doze/response'
+require 'doze/responder'
+require 'doze/responder/main'
+require 'doze/responder/error'
+require 'doze/responder/resource'
+require 'doze/negotiator'
 
-class Rack::REST::Application
-  include Rack::REST::Utils
+class Doze::Application
+  include Doze::Utils
 
   DEFAULT_CONFIG = {
-    :error_resource_class => Rack::REST::Resource::Error,
+    :error_resource_class => Doze::Resource::Error,
 
     # Setting this to false is useful for testing, so an exception can make a test fail via
     # the normal channels rather than having to check and parse it out of a response.
@@ -47,8 +47,8 @@ class Rack::REST::Application
 
   def call(env)
     begin
-      request = Rack::REST::Request.new(env)
-      responder = Rack::REST::Responder::Main.new(self, request)
+      request = Doze::Request.new(env)
+      responder = Doze::Responder::Main.new(self, request)
       responder.call
     rescue => exception
       raise unless config[:catch_application_errors]

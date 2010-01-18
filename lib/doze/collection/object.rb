@@ -1,6 +1,6 @@
-module Rack::REST::Collection::Object
+module Doze::Collection::Object
 
-  include Rack::REST::Serialization::Resource
+  include Doze::Serialization::Resource
 
   def get_data
   end

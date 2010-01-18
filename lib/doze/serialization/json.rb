@@ -1,10 +1,10 @@
 require 'json'
-require 'rest_on_rack/media_type'
-require 'rest_on_rack/serialization/entity'
-require 'rest_on_rack/error'
-require 'rest_on_rack/utils'
+require 'doze/media_type'
+require 'doze/serialization/entity'
+require 'doze/error'
+require 'doze/utils'
 
-module Rack::REST::Serialization
+module Doze::Serialization
   class Entity::JSON < Entity
     def serialize(ruby_data)
       ruby_data.to_json
@@ -20,10 +20,10 @@ module Rack::REST::Serialization
           ::JSON.parse("[#{binary_data}]").first
         end
       rescue ::JSON::ParserError
-        raise Rack::REST::ClientEntityError, "Could not parse JSON"
+        raise Doze::ClientEntityError, "Could not parse JSON"
       end
     end
   end
 
-  JSON = Rack::REST::MediaType.register('application/json', :plus_suffix => 'json', :entity_class => Entity::JSON)
+  JSON = Doze::MediaType.register('application/json', :plus_suffix => 'json', :entity_class => Entity::JSON)
 end

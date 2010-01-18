@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class ResourceRepresentationTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def test_get_with_resource_representation
     resource = mock_resource('/foo/bar')

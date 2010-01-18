@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class AuthTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def test_deny_unauthenticated_user
     root.expects(:authorize).with(nil, :get).returns(false).once

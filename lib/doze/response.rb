@@ -1,5 +1,5 @@
-class Rack::REST::Response
-  include Rack::REST::Utils
+class Doze::Response
+  include Doze::Utils
 
   def initialize(status=STATUS_OK, headers={}, body='')
     @headers = Rack::Utils::HeaderHash.new(headers)

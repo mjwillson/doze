@@ -1,8 +1,8 @@
 require 'functional/base'
 
 class CacheHeaderTest < Test::Unit::TestCase
-  include Rack::REST::Utils
-  include Rack::REST::TestCase
+  include Doze::Utils
+  include Doze::TestCase
 
   def test_with_no_cache_headers
     root.expects(:cacheable?).returns(nil).once

@@ -10,7 +10,7 @@ require 'digest/md5'
 #
 # TODO: handle character encodings here in a nicer 1.9-compatible way
 # TODO: maybe allow a stream for lazy_binary_data too
-class Rack::REST::Entity
+class Doze::Entity
   DEFAULT_TEXT_ENCODING = 'iso-8859-1'
 
   attr_reader :binary_data, :media_type, :encoding, :language

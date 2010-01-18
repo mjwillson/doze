@@ -1,5 +1,5 @@
 # Implements a subset of URI template spec.
-class Rack::REST::URITemplate
+class Doze::URITemplate
   def self.compile(string, var_regexps={})
     is_varexp = true
     parts = string.split(/\{(.*?)\}/).map do |bit|
@@ -24,12 +24,12 @@ class Rack::REST::URITemplate
   def parts; [self]; end
 
   def +(other)
-    other = String.new(other.to_s) unless other.is_a?(Rack::REST::URITemplate)
+    other = String.new(other.to_s) unless other.is_a?(Doze::URITemplate)
     Composite.new(parts + other.parts)
   end
 
   def with_prefix(prefix)
-    prefix = String.new(prefix.to_s) unless prefix.is_a?(Rack::REST::URITemplate)
+    prefix = String.new(prefix.to_s) unless prefix.is_a?(Doze::URITemplate)
     prefix + self
   end
 
@@ -59,7 +59,7 @@ class Rack::REST::URITemplate
     [result, match.to_s, trailing]
   end
 
-  class Variable < Rack::REST::URITemplate
+  class Variable < Doze::URITemplate
     DEFAULT_REGEXP = "[^\/.,;?]+"
 
     attr_reader :name
@@ -91,7 +91,7 @@ class Rack::REST::URITemplate
     end
   end
 
-  class String < Rack::REST::URITemplate
+  class String < Doze::URITemplate
     attr_reader :string
 
     def initialize(string)
@@ -115,7 +115,7 @@ class Rack::REST::URITemplate
     def variables; []; end
   end
 
-  class Composite < Rack::REST::URITemplate
+  class Composite < Doze::URITemplate
     def initialize(parts)
       @parts = parts
     end

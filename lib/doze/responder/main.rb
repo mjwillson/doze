@@ -1,17 +1,17 @@
-class Rack::REST::Responder::Main < Rack::REST::Responder
+class Doze::Responder::Main < Doze::Responder
 
   def response
     resource = route_request
     if resource
-      Rack::REST::Responder::Resource.new(@app, @request, resource).response
+      Doze::Responder::Resource.new(@app, @request, resource).response
     elsif @request.options?
       if @request.path_info == '*'
         # Special response for "OPTIONS *" as in HTTP spec:
         rec_methods = (@app.config[:recognized_methods] + [:head, :options]).join(', ').upcase
-        Rack::REST::Response.new(STATUS_NO_CONTENT, 'Allow' => rec_methods)
+        Doze::Response.new(STATUS_NO_CONTENT, 'Allow' => rec_methods)
       else
         # Special OPTIONS response for non-existent resource:
-        Rack::REST::Response.new(STATUS_NO_CONTENT, 'Allow' => 'OPTIONS')
+        Doze::Response.new(STATUS_NO_CONTENT, 'Allow' => 'OPTIONS')
       end
     else
       error_response(STATUS_NOT_FOUND)
@@ -26,9 +26,9 @@ class Rack::REST::Responder::Main < Rack::REST::Responder
     base_uri = ''
 
     while true
-      if remaining_path && route_to.is_a?(Rack::REST::Router)
+      if remaining_path && route_to.is_a?(Doze::Router)
         route_to, base_uri, remaining_path = route_to.route(remaining_path, method, base_uri)
-      elsif !remaining_path && route_to.is_a?(Rack::REST::Resource)
+      elsif !remaining_path && route_to.is_a?(Doze::Resource)
         return route_to
       else
         return

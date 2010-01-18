@@ -1,4 +1,4 @@
-module Rack::REST::Resource
+module Doze::Resource
 
   # URIs and identity
 
@@ -64,14 +64,14 @@ module Rack::REST::Resource
   #
   # You may return either:
   #
-  #   * A single entity representation, in the form of an instance of Rack::REST::Entity
+  #   * A single entity representation, in the form of an instance of Doze::Entity
   #
-  #   * An array of multiple entity representations, instances of Rack::REST::Entity with different media_types and/or languages.
+  #   * An array of multiple entity representations, instances of Doze::Entity with different media_types and/or languages.
   #     Content negotiation may be used to select an appropriate entity from the list.
-  #     NB: if you return multiple entities we recommend using 'lazy' Rack::REST::Entity instances constructed with a block -
+  #     NB: if you return multiple entities we recommend using 'lazy' Doze::Entity instances constructed with a block -
   #         this way the entity data will not need to be generated for entities which aren't selected by content negotiation.
   #
-  #   * A resource representation, in the form of a Rack::REST::Resource with a URI
+  #   * A resource representation, in the form of a Doze::Resource with a URI
   #     This would correspond to a redirect in HTTP.
   #
   # If you wish to indicate that the resource is missing, return false from exists?
@@ -118,12 +118,12 @@ module Rack::REST::Resource
   # Does not need to be idempotent or safe, and should not be assumed to be.
   #
   # May return:
-  #   * A Rack::REST::Resource with identifier_components, which will be taken as a newly-created resource.
+  #   * A Doze::Resource with identifier_components, which will be taken as a newly-created resource.
   #     This is what we're recommending as the primary intended semantics for post.
   #   * nil to indicate success without exposing a resulting resource
-  #   * A Rack::REST::Resource without identifier_components, which will be taken to be a returned description of the results of some arbitrary operation performed
+  #   * A Doze::Resource without identifier_components, which will be taken to be a returned description of the results of some arbitrary operation performed
   #     (see discouragement above)
-  #   * A Rack::REST::Entity, which will be taken to be a returned description of the results of some arbitrary operation performed
+  #   * A Doze::Entity, which will be taken to be a returned description of the results of some arbitrary operation performed
   #     (this one even more discouraged, but there if you need a quick way to make an arbitrary fixed response)
   def post(entity)
     nil

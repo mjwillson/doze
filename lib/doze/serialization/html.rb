@@ -1,9 +1,9 @@
 require 'json'
-require 'rest_on_rack/media_type'
-require 'rest_on_rack/serialization/entity'
-require 'rest_on_rack/utils'
+require 'doze/media_type'
+require 'doze/serialization/entity'
+require 'doze/utils'
 
-module Rack::REST::Serialization
+module Doze::Serialization
   class Entity::HTML < Entity
     def serialize(data)
       # TODO move to a template
@@ -70,25 +70,25 @@ END
         items.empty? ? '&nbsp;' : "<table rules='all' frame='void'>#{items.join("\n")}</table>"
       when URI
         "<a href='#{Rack::Utils.escape_html(data)}'>#{Rack::Utils.escape_html(data)}</a>"
-      when Rack::REST::URITemplate
+      when Doze::URITemplate
         if data.variables.length > 0
           # Clever HTML rendering of a URI template.
           # Make a HTML form which uses some javascript onsubmit to navigate to an expanded version of the URI template,
           # with blanks filled in via INPUTs.
           inputs = data.parts.map do |part|
             case part
-            when Rack::REST::URITemplate::String
+            when Doze::URITemplate::String
               Rack::Utils.escape_html(part.string)
-            when Rack::REST::URITemplate::Variable
+            when Doze::URITemplate::Variable
               "<input name='#{Rack::Utils.escape_html(part.name)}'>"
             end
           end.join
 
           i=-1; js = data.parts.map do |part|
             case part
-            when Rack::REST::URITemplate::String
+            when Doze::URITemplate::String
               part.string.to_json
-            when Rack::REST::URITemplate::Variable
+            when Doze::URITemplate::Variable
               i += 1; "this.elements[#{i}].value"
             end
           end
@@ -105,8 +105,8 @@ END
     end
   end
 
-  # A browser-friendly media type for use with Rack::REST::Serialization::Resource.
+  # A browser-friendly media type for use with Doze::Serialization::Resource.
   # We don't register it, since you might not want to use it for submitted html entities,
   # but you can call register! on it yourself if you do
-  HTML = Rack::REST::MediaType.new('text/html', :entity_class => Entity::HTML)
+  HTML = Doze::MediaType.new('text/html', :entity_class => Entity::HTML)
 end
