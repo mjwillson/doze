@@ -24,7 +24,8 @@ module Doze::TestCase
 
   TEST_CONFIG = {
     :catch_application_errors => false,
-    :rack_env_user_key => 'REMOTE_USER'
+    :session_from_rack_env => proc {|env| env['REMOTE_USER']},
+    :session_authenticated => proc {|session| !session.nil?}
   }
 
   def app(config={})

@@ -98,8 +98,8 @@ class Doze::Responder::Resource < Doze::Responder
   end
 
   def authorization_fail_response(action)
-    unless @resource.authorize(@request.authenticated_user, action)
-      error_response(@request.authenticated_user ?
+    unless @resource.authorize(@request.session, action)
+      error_response(@request.session_authenticated? ?
                   STATUS_FORBIDDEN :   # this one, 403, really means 'unauthorized', ie
                   STATUS_UNAUTHORIZED  # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
       )

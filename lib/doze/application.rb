@@ -37,11 +37,16 @@ class Doze::Application
 
     # You might need to change this depending on what rack middleware you use to
     # authenticate / identify users. Eg could use
-    #   'rack.session' for use with Rack::Session (the default)
-    #   'REMOTE_USER' for use with Rack::Auth::Basic / Digest, and direct via Apache and some other front-ends that do http auth
-    #   'rack.auth.openid' for use with Rack::Auth::OpenID
+    #   env['rack.session'] for use with Rack::Session (the default)
+    #   env['REMOTE_USER'] for use with Rack::Auth::Basic / Digest, and direct via Apache and some other front-ends that do http auth
+    #   env['rack.auth.openid'] for use with Rack::Auth::OpenID
     # This is used to look up a session or user object in the rack environment
-    :rack_env_user_key => 'rack.session'
+    :session_from_rack_env => proc {|env| env['rack.session']},
+
+    # Used to determine whether the user/session object obtained via :session_from_rack_env is to be treated as authenticated or not.
+    # By default this looks for a key :user within a session object.
+    # For eg env['REMOTE_USER'] the session is the authenticated username and you probably just want to test for !session.nil?
+    :session_authenticated => proc {|session| !session[:user].nil?}
   }
 
   attr_reader :config, :root

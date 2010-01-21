@@ -14,7 +14,7 @@ module Doze::Router
   #                       may be a suffix of the actual request path, if this router has been
   #                       delegated to by a higher-level router)
   #  method             - symbol for the http method being routed for this path
-  #  user               - authenticated user from the request - see Application.config[:rack_env_user_key]
+  #  session            - session from the request - see Application.config[:session_from_rack_env]
   #  base_uri           - the base uri at which the routing is taking place
   #
   # should return either:
@@ -25,7 +25,7 @@ module Doze::Router
   #   route_to           - Resource or Router to route the request to
   #   base_uri_for_match - base uri for the resource or router which we matched
   #   trailing           - any trailing bits of path following from base_uri_for_match to be passed onto the next router
-  def route(path, method, user, base_uri)
+  def route(path, method, session, base_uri)
     self.class.routes.each do |route|
       methods = route[:methods]
       next if methods && ![*methods].include?(method)
@@ -33,7 +33,7 @@ module Doze::Router
       next unless match
       base_uri_for_match = base_uri + uri
 
-      result = call_route(route, base_uri_for_match, user, match) or next
+      result = call_route(route, base_uri_for_match, session, match) or next
 
       return [result, base_uri_for_match, trailing]
     end
@@ -57,23 +57,23 @@ module Doze::Router
     self.class.partially_expand_route_template(name, vars, router_uri_prefix)
   end
 
-  def get_route(name, vars, user=nil)
+  def get_route(name, vars, session=nil)
     route = self.class.routes_by_name[name] or return
     base_uri = expand_route_template(name, vars)
-    call_route(route, base_uri, user, vars)
+    call_route(route, base_uri, session, vars)
   end
 
   private
-    def call_route(route, base_uri, user, vars)
+    def call_route(route, base_uri, session, vars)
       if (method = route[:method])
-        if route[:user_specific]
-          send(method, base_uri, vars, user)
+        if route[:session_specific]
+          send(method, base_uri, vars, session)
         else
           send(method, base_uri, vars)
         end
       elsif (resource_class = route[:to])
-        if route[:user_specific]
-          resource_class.new(base_uri, user)
+        if route[:session_specific]
+          resource_class.new(base_uri, session)
         else
           resource_class.new(base_uri)
         end

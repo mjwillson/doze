@@ -152,7 +152,7 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
 
   def test_user_specific_route
     root_router do
-      route('/foo/{x}/{y}', :user_specific => true) do |uri, params, user|
+      route('/foo/{x}/{y}', :session_specific => true) do |uri, params, user|
         Doze::MockResource.new(uri, [uri, params, user].inspect)
       end
     end

@@ -44,8 +44,12 @@ class Doze::Request < Rack::Request
   end
 
   # For now, to do authentication you need some (rack) middleware that sets one of these env's.
-  # See :rack_env_user_key under Doze::Application config
-  def authenticated_user
-    @authenticated_user ||= @env[@app.config[:rack_env_user_key]]
+  # See :session_from_rack_env under Doze::Application config
+  def session
+    @session ||= @app.config[:session_from_rack_env].call(@env)
+  end
+
+  def session_authenticated?
+    @session_authenticated ||= (session && @app.config[:session_authenticated].call(session))
   end
 end
