@@ -33,7 +33,15 @@ class Doze::Application
     # before any resource is called. (methods included here may still be rejected
     # as not supported by individual resources via supports_method).
     # Note: HEAD is supported as part of GET support, and OPTIONS comes for free.
-    :recognized_methods => [:get, :post, :put, :delete]
+    :recognized_methods => [:get, :post, :put, :delete],
+
+    # You might need to change this depending on what rack middleware you use to
+    # authenticate / identify users. Eg could use
+    #   'rack.session' for use with Rack::Session (the default)
+    #   'REMOTE_USER' for use with Rack::Auth::Basic / Digest, and direct via Apache and some other front-ends that do http auth
+    #   'rack.auth.openid' for use with Rack::Auth::OpenID
+    # This is used to look up a session or user object in the rack environment
+    :rack_env_user_key => 'rack.session'
   }
 
   attr_reader :config, :root
@@ -47,7 +55,7 @@ class Doze::Application
 
   def call(env)
     begin
-      request = Doze::Request.new(env)
+      request = Doze::Request.new(self, env)
       responder = Doze::Responder::Main.new(self, request)
       responder.call
     rescue => exception

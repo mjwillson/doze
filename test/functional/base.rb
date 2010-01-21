@@ -22,7 +22,10 @@ end
 module Doze::TestCase
   include Rack::Test::Methods
 
-  TEST_CONFIG = {:catch_application_errors => false}
+  TEST_CONFIG = {
+    :catch_application_errors => false,
+    :rack_env_user_key => 'REMOTE_USER'
+  }
 
   def app(config={})
     @app ||= Doze::Application.new(root, TEST_CONFIG.merge(config))

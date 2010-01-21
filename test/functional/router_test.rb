@@ -7,13 +7,13 @@ class RouterInterfaceTest < Test::Unit::TestCase
   # tests how the basic Router interface is exposed by the framework
 
   def test_router_no_match
-    root_router.expects(:route).with('/foo', :get, '').returns(nil).once
+    root_router.expects(:route).with('/foo', :get, nil, '').returns(nil).once
     assert_equal STATUS_NOT_FOUND, get('/foo').status
   end
 
   def test_router_match_resource_with_no_trailing_path
     resource = mock_resource('/foo')
-    root_router.expects(:route).with('/foo', :get, '').returns([resource, '/foo', nil]).once
+    root_router.expects(:route).with('/foo', :get, nil, '').returns([resource, '/foo', nil]).once
     resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
     assert_equal STATUS_OK, get('/foo').status
   end
@@ -21,7 +21,7 @@ class RouterInterfaceTest < Test::Unit::TestCase
   def test_router_match_resource_but_with_trailing
     # here we route to a resource, but there is some trailing path which can't be routed any further
     resource = mock_resource('/foo')
-    root_router.expects(:route).with('/foo/bar', :get, '').returns([resource, '/foo', '/bar']).once
+    root_router.expects(:route).with('/foo/bar', :get, nil, '').returns([resource, '/foo', '/bar']).once
     resource.expects(:get).never
     assert_equal STATUS_NOT_FOUND, get('/foo/bar').status
   end
@@ -32,8 +32,8 @@ class RouterInterfaceTest < Test::Unit::TestCase
     second_router = mock_router
     resource = mock_resource('/foo/bar')
 
-    root_router.expects(:route).with('/foo/bar', :get, '').returns([second_router, '/foo', '/bar']).once
-    second_router.expects(:route).with('/bar', :get, '/foo').returns([resource, '/foo/bar', nil]).once
+    root_router.expects(:route).with('/foo/bar', :get, nil, '').returns([second_router, '/foo', '/bar']).once
+    second_router.expects(:route).with('/bar', :get, nil, '/foo').returns([resource, '/foo/bar', nil]).once
 
     resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
     assert_equal STATUS_OK, get('/foo/bar').status
@@ -45,8 +45,8 @@ class RouterInterfaceTest < Test::Unit::TestCase
     second_router = mock_router(Doze::MockResource)
     resource = mock_resource('/foo/bar')
 
-    root_router.expects(:route).with('/foo/bar', :get, '').returns([second_router, '/foo', '/bar']).once
-    second_router.expects(:route).with('/bar', :get, '/foo').returns([resource, '/foo/bar', nil]).once
+    root_router.expects(:route).with('/foo/bar', :get, nil, '').returns([second_router, '/foo', '/bar']).once
+    second_router.expects(:route).with('/bar', :get, nil, '/foo').returns([resource, '/foo/bar', nil]).once
 
     second_router.expects(:get).never
     resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
@@ -56,11 +56,16 @@ class RouterInterfaceTest < Test::Unit::TestCase
   def test_router_match_router_resource_with_no_trailing
     resource = mock_router(Doze::MockResource)
 
-    root_router.expects(:route).with('/foo', :get, '').returns([resource, '/foo', nil]).once
+    root_router.expects(:route).with('/foo', :get, nil, '').returns([resource, '/foo', nil]).once
     resource.expects(:route).never
     resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
 
     assert_equal STATUS_OK, get('/foo').status
+  end
+
+  def test_router_gets_passed_user
+    root_router.expects(:route).with('/foo', :get, 'Mack', '').returns(nil).once
+    assert_equal STATUS_NOT_FOUND, get('/foo', 'REMOTE_USER' => 'Mack').status
   end
 end
 
@@ -143,5 +148,19 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
     assert_equal STATUS_NOT_FOUND, get('/foo/abc').status
     assert_equal STATUS_OK, get('/foo/123').status
     assert_equal "123", last_response.body
+  end
+
+  def test_user_specific_route
+    root_router do
+      route('/foo/{x}/{y}', :user_specific => true) do |uri, params, user|
+        Doze::MockResource.new(uri, [uri, params, user].inspect)
+      end
+    end
+
+    get('/foo/abc/123', 'REMOTE_USER' => 'Mo')
+
+    assert_equal STATUS_OK, last_response.status
+    assert_equal(['/foo/abc/123', {:x => 'abc', :y => '123'}, 'Mo'].inspect, last_response.body)
+
   end
 end

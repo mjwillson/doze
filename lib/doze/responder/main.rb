@@ -23,11 +23,12 @@ class Doze::Responder::Main < Doze::Responder
     remaining_path = @request.path_info
     remaining_path = nil if remaining_path.empty? || remaining_path == '/'
     method = recognized_method
+    user = @request.authenticated_user
     base_uri = ''
 
     while true
       if remaining_path && route_to.is_a?(Doze::Router)
-        route_to, base_uri, remaining_path = route_to.route(remaining_path, method, base_uri)
+        route_to, base_uri, remaining_path = route_to.route(remaining_path, method, user, base_uri)
       elsif !remaining_path && route_to.is_a?(Doze::Resource)
         return route_to
       else
