@@ -57,7 +57,7 @@ module Doze::Router
     self.class.partially_expand_route_template(name, vars, router_uri_prefix)
   end
 
-  def get_route(name, vars, session=nil)
+  def get_route(name, vars={}, session=nil)
     route = self.class.routes_by_name[name] or return
     base_uri = expand_route_template(name, vars)
     call_route(route, base_uri, session, vars)
