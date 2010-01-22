@@ -25,19 +25,28 @@ module Doze::Router
   #   route_to           - Resource or Router to route the request to
   #   base_uri_for_match - base uri for the resource or router which we matched
   #   trailing           - any trailing bits of path following from base_uri_for_match to be passed onto the next router
-  def route(path, method, session, base_uri)
-    self.class.routes.each do |route|
-      methods = route[:methods]
-      next if methods && ![*methods].include?(method)
-      match, uri, trailing = route[:template].match_with_trailing(path)
+  def perform_routing(path, session, base_uri)
+    for route in routes
+      match, uri, trailing = route.match(path)
       next unless match
       base_uri_for_match = base_uri + uri
-
-      result = call_route(route, base_uri_for_match, session, match) or next
-
+      result = route.call(self, match, session, base_uri_for_match) or next
       return [result, base_uri_for_match, trailing]
     end
     nil
+  end
+
+  # The default Router implementation can run against any RouteSet returned here.
+  # By default routes returns a RouteSet defined at the class level using the class-method routing helpers,
+  # but you can override this if you want to use some instance-specific RouteSet
+  def routes
+    @routes || self.class.routes
+  end
+
+  # Add an instance-specific route. This dups the default route-set
+  def add_route(*p, &b)
+    @routes ||= routes.dup
+    @routes.route(*p, &b)
   end
 
   # If this particular router instance has a uri prefix associated with it
@@ -45,96 +54,34 @@ module Doze::Router
     uri_without_trailing_slash if respond_to?(:uri_without_trailing_slash)
   end
 
+  # Some utilities for routers which are resources or otherwise define router_uri_prefix:
+
   def route_template(name)
-    self.class.route_template(name, router_uri_prefix)
+    route = routes[name] and route.template(router_uri_prefix)
   end
 
   def expand_route_template(name, vars)
-    self.class.expand_route_template(name, vars, router_uri_prefix)
+    route = routes[name] and route.expand(vars, router_uri_prefix)
   end
 
   def partially_expand_route_template(name, vars)
-    self.class.partially_expand_route_template(name, vars, router_uri_prefix)
+    route = routes[name] and route.partially_expand(vars, router_uri_prefix)
   end
 
   def get_route(name, vars={}, session=nil)
-    route = self.class.routes_by_name[name] or return
-    base_uri = expand_route_template(name, vars)
-    call_route(route, base_uri, session, vars)
+    route = routes[name] and route.call(self, vars, session)
   end
-
-  private
-    def call_route(route, base_uri, session, vars)
-      if (method = route[:method])
-        if route[:session_specific]
-          send(method, base_uri, vars, session)
-        else
-          send(method, base_uri, vars)
-        end
-      elsif (resource_class = route[:to])
-        if route[:session_specific]
-          resource_class.new(base_uri, session)
-        else
-          resource_class.new(base_uri)
-        end
-      end
-    end
 
   module ClassMethods
     def routes
-      @routes ||= (superclass.respond_to?(:routes) ? superclass.routes.dup : [])
+      @routes ||= (superclass.respond_to?(:routes) ? superclass.routes.dup : Doze::Router::RouteSet.new)
     end
 
-    def routes_by_name
-      @routes_by_name ||= (superclass.respond_to?(:routes_by_name) ? superclass.routes_by_name.dup : {})
+    def route(*p, &b)
+      routes.route(*p, &b)
     end
-
-    def route_template(name, prefix=nil)
-      route = routes_by_name[name] or return
-      prefix ? route[:template].with_prefix(prefix) : route[:template]
-    end
-
-    def expand_route_template(name, vars, prefix=nil)
-      template = route_template(name, prefix) and template.expand(vars)
-    end
-
-    def partially_expand_route_template(name, vars, prefix=nil)
-      template = route_template(name, prefix) and template.partially_expand(vars)
-    end
-
-    private
-
-    # Examples:
-    #
-    #   route '/catalog', :to => CatalogResource
-    #
-    #   route '/artist/{id}', :methods => [:get, :put] do |base_uri, match|
-    #     # this is evaluated in instance scope
-    #     ArtistResource.new(base_uri, match[:id])
-    #   end
-    #
-    #   route '/foo', :name => 'bar', :method => :route_bar
-    #   def route_bar(base_uri, match); ... ;end
-    #
-    def route(template, options={}, &block)
-      template = Doze::URITemplate.compile(template, options[:regexps] || {}) unless template.is_a?(Doze::URITemplate)
-      options[:template] = template
-
-      route_method_name = "route_#{options[:name] || routes.length}"
-      options[:name] ||= "route_#{routes.length}"
-
-      if block
-        define_method(route_method_name, &block)
-        private(route_method_name)
-      end
-      if method_defined?(route_method_name) || private_method_defined?(route_method_name)
-        options[:method] ||= route_method_name
-      end
-
-      routes << options
-      routes_by_name[options[:name]] = options
-    end
-
-    def reset_routes!; @routes = []; end
   end
 end
+
+require 'doze/router/route'
+require 'doze/router/route_set'
