@@ -6,7 +6,7 @@ class Doze::Router::RouteSet
   end
 
   def <<(route)
-    @routes << route
+    @routes << route unless @routes_by_name.has_key?(route.name)
     @routes_by_name[route.name] = route
     self
   end
