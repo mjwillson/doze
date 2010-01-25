@@ -77,16 +77,25 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
   # tests the default implementation of Router based on routes defined in class method helpers
 
   def test_route_fixed_uri_to_resource_class
+    resource = mock_resource('/foo')
+    resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
     klass = Class.new
+    klass.expects(:new).with("/foo").returns(resource)
 
     root_router do
       route '/foo', :to => klass
     end
 
+    assert_equal STATUS_OK, get('/foo').status
+  end
+
+  def test_route_fixed_uri_to_resource_instance
     resource = mock_resource('/foo')
     resource.expects(:get).returns(mock_entity('foo', 'text/html')).once
 
-    klass.expects(:new).with("/foo").returns(resource)
+    root_router do
+      route '/foo', :to => resource
+    end
 
     assert_equal STATUS_OK, get('/foo').status
   end
@@ -161,5 +170,24 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
 
     assert_equal STATUS_OK, last_response.status
     assert_equal(['/foo/abc/123', {:x => 'abc', :y => '123'}, 'Mo'].inspect, last_response.body)
+  end
+
+  def test_propagate_static_routes
+    klass = Class.new
+    klass.send(:include, Doze::Router)
+    router = mock_router
+    router2 = mock_router
+
+    root_router do
+      route "/bar", :uniquely_to => klass
+      route "/baz", :uniquely_to => router
+      route "/baz", :to => router2
+    end
+
+    root_router.propagate_static_routes("/foo")
+    assert_equal "/foo/bar", klass.router_uri_prefix
+    assert_equal "/foo/bar", klass.new.router_uri_prefix
+    assert_equal "/foo/baz", router.router_uri_prefix
+    assert_equal nil, router2.router_uri_prefix
   end
 end

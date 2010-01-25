@@ -8,6 +8,7 @@ class Doze::Router::RouteSet
   def <<(route)
     @routes << route
     @routes_by_name[route.name] = route
+    self
   end
 
   def [](name)
@@ -15,7 +16,9 @@ class Doze::Router::RouteSet
   end
 
   def route(*p, &b)
-    self << Doze::Router::Route.new(*p, &b)
+    route = Doze::Router::Route.new(*p, &b)
+    self << route
+    route
   end
 
   def each(&b)

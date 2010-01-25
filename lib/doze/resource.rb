@@ -14,10 +14,6 @@ module Doze::Resource
     URI::Generic.build(:path => uri)
   end
 
-  def uri_without_trailing_slash
-    uri && uri.chomp("/")
-  end
-
 
   # Authorization / Authentication:
   #

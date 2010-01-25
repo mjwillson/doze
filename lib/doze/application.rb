@@ -56,6 +56,13 @@ class Doze::Application
   def initialize(root, config={})
     @config = DEFAULT_CONFIG.merge(config)
     @root = root
+
+    # This is done on application initialization to ensure that statically-known
+    # information about routing paths is propagated as far as possible, so that
+    # resource instances can know their uris without necessarily having been
+    # a part of the routing chain for the current request.
+    # TODO use SCRIPT_NAME from the rack env of the first request we get, rather than ''
+    @root.propagate_static_routes('') if @root.respond_to?(:propagate_static_routes)
   end
 
   def call(env)

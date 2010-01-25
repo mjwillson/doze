@@ -62,7 +62,7 @@ class Doze::Resource::Proxy
 
   # Other methods which we can proxy generically
 
-  proxied_methods = Doze::Resource.public_instance_methods(true) - ['uri', 'uri_object', 'uri_without_trailing_slash'] - self.public_instance_methods(false)
+  proxied_methods = Doze::Resource.public_instance_methods(true) - ['uri', 'uri_object'] - self.public_instance_methods(false)
   proxied_methods.each do |method|
     module_eval("def #{method}(*args, &block); @target && @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
   end

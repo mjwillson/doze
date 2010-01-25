@@ -1,4 +1,10 @@
+# A Doze::Router is a Doze::AnchoredRouteSet which routes with itself as the parent Router.
+# Including it also extends the class with Doze::AnchoredRouteSet, and the instances delegates its routes
+# to the class.
 module Doze::Router
+  require 'doze/router/anchored_route_set'
+
+  include Doze::Router::AnchoredRouteSet
 
   def self.included(klass)
     klass.extend(ClassMethods)
@@ -26,14 +32,7 @@ module Doze::Router
   #   base_uri_for_match - base uri for the resource or router which we matched
   #   trailing           - any trailing bits of path following from base_uri_for_match to be passed onto the next router
   def perform_routing(path, session, base_uri)
-    for route in routes
-      match, uri, trailing = route.match(path)
-      next unless match
-      base_uri_for_match = base_uri + uri
-      result = route.call(self, match, session, base_uri_for_match) or next
-      return [result, base_uri_for_match, trailing]
-    end
-    nil
+    perform_routing_with_parent(self, path, session, base_uri)
   end
 
   # The default Router implementation can run against any RouteSet returned here.
@@ -51,28 +50,24 @@ module Doze::Router
 
   # If this particular router instance has a uri prefix associated with it
   def router_uri_prefix
-    uri_without_trailing_slash if respond_to?(:uri_without_trailing_slash)
+    @uri && @uri.chomp('/')
   end
 
-  # Some utilities for routers which are resources or otherwise define router_uri_prefix:
-
-  def route_template(name)
-    route = routes[name] and route.template(router_uri_prefix)
-  end
-
-  def expand_route_template(name, vars)
-    route = routes[name] and route.expand(vars, router_uri_prefix)
-  end
-
-  def partially_expand_route_template(name, vars)
-    route = routes[name] and route.partially_expand(vars, router_uri_prefix)
-  end
-
-  def get_route(name, vars={}, session=nil)
-    route = routes[name] and route.call(self, vars, session)
+  def router_uri_prefix=(uri)
+    @uri = uri
   end
 
   module ClassMethods
+    include Doze::Router::AnchoredRouteSet
+
+    attr_reader :router_uri_prefix
+
+    def router_uri_prefix=(uri)
+      @router_uri_prefix = uri
+      module_eval("def uri; self.class.router_uri_prefix; end", __FILE__, __LINE__)
+      module_eval("def router_uri_prefix; self.class.router_uri_prefix; end", __FILE__, __LINE__)
+    end
+
     def routes
       @routes ||= (superclass.respond_to?(:routes) ? superclass.routes.dup : Doze::Router::RouteSet.new)
     end
