@@ -70,8 +70,12 @@ class Doze::Responder::Resource < Doze::Responder
       make_general_result_response(result, STATUS_CREATED)
 
     when :put
-      result = @resource.put(entity)
-      Doze::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
+      if entity
+        result = @resource.put(entity)
+        Doze::Response.new_empty(existed_before ? STATUS_NO_CONTENT : STATUS_CREATED)
+      else
+        error_response(STATUS_BAD_REQUEST, "expected request body for PUT")
+      end
 
     when :delete
       result = @resource.delete if existed_before

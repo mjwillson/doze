@@ -27,6 +27,7 @@ class PreconditionTest < Test::Unit::TestCase
     root.expects(:supports_post?).returns(true).at_least_once
     root.expects(:supports_put?).returns(true).at_least_once
     root.expects(:supports_delete?).returns(true).at_least_once
+    root.expects(:accepts_method_with_media_type?).returns(true).at_least_once
     root.expects(:post).never
     root.expects(:put).never
     root.expects(:delete).never
@@ -72,6 +73,7 @@ class EntityPreconditionTest < Test::Unit::TestCase
     root.expects(:supports_post?).returns(true).once
     root.expects(:supports_put?).returns(true).once
     root.expects(:supports_delete?).returns(true).once
+    root.expects(:accepts_method_with_media_type?).returns(true).at_least_once
     root.expects(:post).never
     root.expects(:put).never
     root.expects(:delete).never

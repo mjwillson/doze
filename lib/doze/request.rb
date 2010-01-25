@@ -27,20 +27,17 @@ class Doze::Request < Rack::Request
 
   def entity
     return @entity if defined?(@entity)
-    @entity = begin
+    @entity = if media_type
       body = @env['rack.input']; @data = ''
       while (result = body.read(4096))
         @data << result
       end
-      media_type.new_entity_from_binary_data(@data, :encoding => content_charset) unless @data.empty?
+      media_type.new_entity_from_binary_data(@data, :encoding => content_charset)
     end
   end
 
   def media_type
-    @mt ||= begin
-      mt = super or return
-      Doze::MediaType[mt] or raise Doze::Error.new(Doze::Utils::STATUS_UNSUPPORTED_MEDIA_TYPE)
-    end
+    @mt ||= (mt = super and Doze::MediaType[mt])
   end
 
   # For now, to do authentication you need some (rack) middleware that sets one of these env's.
