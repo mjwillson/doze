@@ -48,7 +48,7 @@ class Doze::Resource::Proxy
   def accepts_method_with_media_type?(resource_method, entity)
     method_name = "accepts_#{resource_method}_with_media_type?"
     if respond_to?(method_name)
-      send(method_name, resource_method, entity)
+      send(method_name, entity)
     else
       @target && @target.accepts_method_with_media_type?(resource_method, entity)
     end
