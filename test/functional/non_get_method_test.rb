@@ -72,6 +72,20 @@ class NonGetMethodTest < Test::Unit::TestCase
     assert_equal STATUS_NO_CONTENT, last_response.status
   end
 
+  def test_post_with_extra_arity_gets_session
+    root.expects(:supports_post?).returns(true)
+    root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
+
+    # Because mocha doesn't set the arity right
+    def root.post(a, b)
+      post_actually_called(a, b)
+    end
+    root.expects(:post_actually_called).with(instance_of(Doze::Entity), "user").once
+
+    post('REMOTE_USER' => 'user', 'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
+    assert_equal STATUS_NO_CONTENT, last_response.status
+  end
+
   def test_post_returning_entity
     root.expects(:supports_post?).returns(true)
     root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)

@@ -64,7 +64,18 @@ class Doze::Responder::Resource < Doze::Responder
   def perform_non_get_action(entity, existed_before)
     case recognized_method
     when :post
-      result = @resource.post(entity)
+      # Slightly hacky but for now we allow the session to be passed as an extra arg to post actions
+      # where the method has sufficient arity.
+      #
+      # This is only supported for POST at present; prefered approach (especially for GET/PUT/DELETE)
+      # is to use a session-specific route and construct the resource with the session context.
+      # Also, this should not be used for authorization logic - use the authorize method for that.
+      result = if @resource.method(:post).arity.abs > 1
+        @resource.post(entity, @request.session)
+      else
+        @resource.post(entity)
+      end
+
       # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
       # this is the only respect in which it differs from the general other_method treatment
       make_general_result_response(result, STATUS_CREATED)
