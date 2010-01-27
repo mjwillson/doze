@@ -53,8 +53,8 @@ module Doze::Router
     @uri && @uri.chomp('/')
   end
 
-  def router_uri_prefix=(uri)
-    @uri = uri
+  def router_uri_prefix=(uri_prefix)
+    @uri = uri_prefix.empty? ? '/' : uri_prefix
   end
 
   module ClassMethods
