@@ -46,7 +46,7 @@ class Doze::Responder::Resource < Doze::Responder
       response
     else
       entity = @request.entity
-      if entity
+      if entity && recognized_method != :delete
         fail = request_entity_media_type_fail_response(recognized_method, entity) and return fail
       end
 

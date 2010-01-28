@@ -26,9 +26,10 @@ class MethodSupportTest < Test::Unit::TestCase
     app(:recognized_methods => [:foo,:bar])
 
     root.expects(:supports_foo?).returns(true).at_least_once
+    root.expects(:accepts_method_with_media_type?).with(:foo, anything).returns(true).at_least_once
     root.expects(:supports_bar?).never
-    root.expects(:other_method).with(:foo, nil).once
-    assert_not_equal STATUS_METHOD_NOT_ALLOWED, other_request_method('FOO').status
+    root.expects(:other_method).with(:foo, anything).returns(nil).once
+    assert_equal STATUS_NO_CONTENT, other_request_method('FOO').status
   end
 
   def test_options_with_get_supported_with_head_and_options_handled_automatically
