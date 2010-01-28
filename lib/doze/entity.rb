@@ -15,6 +15,12 @@ class Doze::Entity
 
   attr_reader :binary_data, :media_type, :encoding, :language
 
+  # Used when constructing a HTTP response from this entity
+  # For when you need to specify extra entity-content-specific HTTP headers to be included when
+  # responding with this entity.
+  # A teensy bit of an abstraction leak, but helpful for awkward cases.
+  attr_reader :extra_content_headers
+
   class << self; alias :new_from_binary_data :new; end
 
   def initialize(media_type, binary_data=nil, options={}, &lazy_binary_data)
@@ -24,6 +30,7 @@ class Doze::Entity
     @media_type = media_type
     @encoding   = options[:encoding] || (DEFAULT_TEXT_ENCODING if @media_type.major == 'text')
     @language   = options[:language]
+    @extra_content_headers = options[:extra_content_headers] || {}
   end
 
   def binary_data

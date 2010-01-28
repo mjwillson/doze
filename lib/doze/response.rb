@@ -30,6 +30,7 @@ class Doze::Response
     @headers['Content-Type'] = content_type
     @headers['Content-Language'] = language if language
     @headers['ETag'] = quote(etag) if etag
+    @headers.merge!(entity.extra_content_headers)
 
     @body = entity.binary_data
   end
