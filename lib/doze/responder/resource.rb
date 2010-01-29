@@ -77,8 +77,7 @@ class Doze::Responder::Resource < Doze::Responder
       end
 
       # 201 created is the default interpretation of a new resource with an identifier resulting from a post.
-      # this is the only respect in which it differs from the general other_method treatment
-      make_general_result_response(result, STATUS_CREATED)
+      make_post_result_response(result)
 
     when :put
       if entity
@@ -94,9 +93,8 @@ class Doze::Responder::Resource < Doze::Responder
 
     else
       result = @resource.other_method(recognized_method, entity)
-      # 303 See Other is the default interpretation of a new resource with an identifier resulting from some other method.
-      # TODO: maybe a way to indicate the semantics of the operation that resulted so that other status codes can be returned
-      make_general_result_response(result, STATUS_SEE_OTHER)
+      # For now we streat this pretty much as a POST
+      make_post_result_response(result)
     end
   end
 
@@ -220,7 +218,7 @@ class Doze::Responder::Resource < Doze::Responder
     end
   end
 
-  def make_representation_of_resource_response
+  def make_representation_of_resource_response(include_location_with_status=nil)
     response = Doze::Response.new
     representation = get_preferred_representation(response)
 
@@ -238,20 +236,22 @@ class Doze::Responder::Resource < Doze::Responder
         response
       end
       add_caching_headers(response)
+
+      if include_location_with_status && @resource.uri
+        response.set_location(@resource, @request)
+        response.status = include_location_with_status
+      end
+
       response
     when Doze::Response
       representation
     end
   end
 
-  def make_general_result_response(result, status_for_resource_redirect_result=STATUS_SEE_OTHER)
+  def make_post_result_response(result)
     case result
     when Doze::Resource
-      if result.uri
-        Doze::Response.new_redirect(result, @request, status_for_resource_redirect_result)
-      else
-        Doze::Responder::Resource.new(@app, @request, result, @options).make_representation_of_resource_response
-      end
+      Doze::Responder::Resource.new(@app, @request, result, @options).make_representation_of_resource_response(STATUS_CREATED)
     when Doze::Entity
       Doze::Response.new_from_entity(result)
     when Doze::Response

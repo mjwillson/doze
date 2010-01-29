@@ -48,8 +48,12 @@ class Doze::Response
   def set_redirect(resource, request, status=STATUS_SEE_OTHER)
     raise 'Resource specified as a representation must have a uri in order to redirect to it' unless resource.uri
     @status = status
+    set_location(resource, request)
+    @body ||= ''
+  end
+
+  def set_location(resource, request)
     @headers['Location'] = absolute_resource_uri_based_on_request_uri(request, resource).to_s
-    @body = ''
   end
 
   def self.new_redirect(resource, request, status=STATUS_SEE_OTHER)

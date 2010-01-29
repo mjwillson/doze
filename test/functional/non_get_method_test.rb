@@ -52,7 +52,7 @@ class NonGetMethodTest < Test::Unit::TestCase
   def test_post_returning_created_resource
     root.expects(:supports_post?).returns(true)
     root.expects(:accepts_post_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
-    created = mock_resource('/uri')
+    created = mock_resource('/uri', 'foo')
     root.expects(:post).with do |value|
       value.is_a?(Doze::Entity) and
       value.binary_data == 'foob' and value.media_type == @foo and value.encoding == 'foobar'
@@ -61,6 +61,7 @@ class NonGetMethodTest < Test::Unit::TestCase
     post('CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob')
     assert_equal STATUS_CREATED, last_response.status
     assert_response_header 'Location', 'http://example.org/uri'
+    assert_equal 'foo', last_response.body
   end
 
   def test_post_returning_nothing
@@ -157,13 +158,12 @@ class NonGetMethodTest < Test::Unit::TestCase
 
     root.expects(:supports_patch?).returns(true)
     root.expects(:accepts_method_with_media_type?).with {|m,a| m == :patch && a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(true)
-    resource = mock_resource('/foo')
-    resource.expects(:get).never
+    resource = mock_resource('/foo', 'bar')
     root.expects(:patch).returns(resource).once
 
     other_request_method('PATCH', {'CONTENT_TYPE' => 'text/foo; charset=foobar', :input => 'foob'})
-    assert_equal STATUS_SEE_OTHER, last_response.status
+    assert_equal STATUS_CREATED, last_response.status
     assert_response_header 'Location', 'http://example.org/foo'
-    assert last_response.body.empty?
+    assert_equal 'bar', last_response.body
   end
 end
