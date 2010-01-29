@@ -174,19 +174,20 @@ class Doze::Responder::Resource < Doze::Responder
   # Response handling helpers
 
   def get_preferred_representation(response=nil)
-    get_result = @resource.get or return
-    return get_result if get_result.is_a?(Doze::Resource) || get_result.nil?
+    representation = @resource.get
+    if representation.is_a?(Array)
+      negotiator = Doze::Negotiator.new(@request, @options[:ignore_unacceptable_accepts])
 
-    *representations = *get_result
-    negotiator = Doze::Negotiator.new(@request, @options[:ignore_unacceptable_accepts])
+      if response
+        # If the available representation entities differ by media type, add a Vary: Accept. similarly for language.
+        response.add_header_values('Vary', 'Accept') if not_all_equal?(representation.map {|e| e.media_type})
+        response.add_header_values('Vary', 'Accept-Language') if not_all_equal?(representation.map {|e| e.language})
+      end
 
-    if response
-      # If the available representation entities differ by media type, add a Vary: Accept. similarly for language.
-      response.add_header_values('Vary', 'Accept') if not_all_equal?(representations.map {|e| e.media_type})
-      response.add_header_values('Vary', 'Accept-Language') if not_all_equal?(representations.map {|e| e.language})
+      negotiator.choose_entity(representation) or raise_error(STATUS_NOT_ACCEPTABLE)
+    else
+      representation
     end
-
-    negotiator.choose_entity(representations) or raise_error(STATUS_NOT_ACCEPTABLE)
   end
 
   def not_all_equal?(collection)
@@ -222,10 +223,13 @@ class Doze::Responder::Resource < Doze::Responder
   def make_representation_of_resource_response
     response = Doze::Response.new
     representation = get_preferred_representation(response)
+
     case representation
     when Doze::Resource
       raise 'Resource representation must have a uri' unless representation.uri
       response.set_redirect(representation, @request)
+      add_caching_headers(response)
+      response
     when Doze::Entity
       # preconditions on the representation only apply to the content that would be served up by a GET
       fail_response = @request.get_or_head? && entity_preconditions_fail_response(representation)
@@ -233,10 +237,11 @@ class Doze::Responder::Resource < Doze::Responder
         response.entity = representation
         response
       end
+      add_caching_headers(response)
+      response
+    when Doze::Response
+      representation
     end
-
-    add_caching_headers(response)
-    response
   end
 
   def make_general_result_response(result, status_for_resource_redirect_result=STATUS_SEE_OTHER)
@@ -249,6 +254,8 @@ class Doze::Responder::Resource < Doze::Responder
       end
     when Doze::Entity
       Doze::Response.new_from_entity(result)
+    when Doze::Response
+      result
     when nil
       Doze::Response.new_empty
     end
