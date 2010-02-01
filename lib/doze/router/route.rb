@@ -40,7 +40,7 @@ class Doze::Router::Route
       @target_instance = target
     when Class
       @static = true if @static.nil?
-      @block = target.method(:new)
+      @block = block || target.method(:new)
     else
       @block = block or raise "You must specify :to or give a block"
     end
