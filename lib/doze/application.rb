@@ -49,12 +49,13 @@ class Doze::Application
     :session_authenticated => proc {|session| !session[:user].nil?}
   }
 
-  attr_reader :config, :root
+  attr_reader :config, :root, :logger
 
   # root may be a Router, a Resource, or both.
   # If a resource, its uri should return '/'
   def initialize(root, config={})
     @config = DEFAULT_CONFIG.merge(config)
+    @logger = @config[:logger] || STDOUT
     @root = root
 
     # This is done on application initialization to ensure that statically-known
@@ -72,12 +73,10 @@ class Doze::Application
       responder.call
     rescue => exception
       raise unless config[:catch_application_errors]
-      lines = ['500 response via error resource failed']
-      if config[:expose_exception_details]
-        lines << exception.message
-        lines.push(*exception.backtrace) if exception.backtrace
-      end
-      [STATUS_INTERNAL_SERVER_ERROR, {}, [lines.join("\n")]]
+      lines = ['500 response via error resource failed', "#{exception.class}: #{exception.message}", *exception.backtrace]
+      @logger << lines.join("\n")
+      body = config[:expose_exception_details] ? lines : [lines.first]
+      [STATUS_INTERNAL_SERVER_ERROR, {}, [body.join("\n")]]
     end
   end
 end

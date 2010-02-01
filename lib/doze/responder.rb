@@ -35,6 +35,8 @@ class Doze::Responder
       error_response_from_error(error).finish
     rescue => exception
       raise unless @app.config[:catch_application_errors]
+      lines = ["#{exception.class}: #{exception.message}", *exception.backtrace].join("\n")
+      @app.logger << lines
       if @app.config[:expose_exception_details]
         error_response(STATUS_INTERNAL_SERVER_ERROR, exception.message, {}, exception.backtrace).finish
       else
