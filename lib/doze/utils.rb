@@ -21,10 +21,6 @@ module Doze::Utils
     )
   end
 
-  def absolute_resource_uri_based_on_request_uri(request, resource)
-    request_base_uri(request).merge(resource.uri)
-  end
-
   def quote(str)
     '"' << str.gsub(/[\\\"]/o, "\\\1") << '"'
   end

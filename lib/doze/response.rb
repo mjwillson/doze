@@ -53,7 +53,8 @@ class Doze::Response
   end
 
   def set_location(resource, request)
-    @headers['Location'] = absolute_resource_uri_based_on_request_uri(request, resource).to_s
+    base_uri = request.app.config[:base_uri] || request_base_uri(request)
+    @headers['Location'] = base_uri.merge(resource.uri).to_s
   end
 
   def self.new_redirect(resource, request, status=STATUS_SEE_OTHER)
