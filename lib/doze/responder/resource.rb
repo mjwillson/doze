@@ -88,7 +88,7 @@ class Doze::Responder::Resource < Doze::Responder
       end
 
     when :delete
-      result = @resource.delete if existed_before
+      result = @resource.delete_resource if existed_before
       Doze::Response.new_empty
 
     else

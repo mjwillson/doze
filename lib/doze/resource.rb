@@ -94,7 +94,7 @@ module Doze::Resource
   #  * parent.resolve_subresource(additional_identifier_components) should return nil, or return a resource which "doesn't exist" in the same sense as above.
   #
   # Need not return anything; success is assumed unless an error is raised. (or: should we have this return true/false?)
-  def delete
+  def delete_resource
     nil
   end
 

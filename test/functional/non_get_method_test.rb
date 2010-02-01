@@ -114,7 +114,7 @@ class NonGetMethodTest < Test::Unit::TestCase
   def test_delete
     root.expects(:supports_delete?).returns(true)
     root.expects(:accepts_delete_with_media_type?).never
-    root.expects(:delete).returns(nil).once
+    root.expects(:delete_resource).returns(nil).once
 
     delete
     assert_equal STATUS_NO_CONTENT, last_response.status
