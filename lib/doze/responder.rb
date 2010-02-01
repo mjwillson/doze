@@ -48,4 +48,11 @@ class Doze::Responder
   def response
     raise NotImplementedError
   end
+
+  def auth_failed_response
+    error_response(@request.session_authenticated? ?
+                STATUS_FORBIDDEN :   # this one, 403, really means 'unauthorized', ie
+                STATUS_UNAUTHORIZED  # http status code 401 called 'unauthorized' but really used to mean 'unauthenticated'
+    )
+  end
 end

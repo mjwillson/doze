@@ -57,6 +57,12 @@ module Doze::Router
     @uri = uri_prefix.empty? ? '/' : uri_prefix
   end
 
+  # called upon by the framework
+  # return false to blanket deny authorization to all methods on all routed subresources
+  def authorize_routing(session)
+    true
+  end
+
   module ClassMethods
     include Doze::Router::AnchoredRouteSet
 

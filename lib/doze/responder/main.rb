@@ -1,7 +1,27 @@
 class Doze::Responder::Main < Doze::Responder
 
   def response
-    resource = route_request
+    resource = nil
+    route_to = @app.root
+    remaining_path = @request.path_info
+    remaining_path = nil if remaining_path.empty? || remaining_path == '/'
+    session = @request.session
+    base_uri = ''
+
+    # main routing loop - results in either a final Resource which has been routed to, or nil
+    while true
+      if remaining_path && route_to.is_a?(Doze::Router)
+        # Bail early with a 401 or 403 if the router refuses to authorize further routing
+        return auth_failed_response unless route_to.authorize_routing(@request.session)
+        route_to, base_uri, remaining_path = route_to.perform_routing(remaining_path, session, base_uri)
+      elsif !remaining_path && route_to.is_a?(Doze::Resource)
+        resource = route_to
+        break
+      else
+        break
+      end
+    end
+
     if resource
       Doze::Responder::Resource.new(@app, @request, resource).response
     elsif @request.options?
@@ -15,24 +35,6 @@ class Doze::Responder::Main < Doze::Responder
       end
     else
       error_response(STATUS_NOT_FOUND)
-    end
-  end
-
-  def route_request
-    route_to = @app.root
-    remaining_path = @request.path_info
-    remaining_path = nil if remaining_path.empty? || remaining_path == '/'
-    session = @request.session
-    base_uri = ''
-
-    while true
-      if remaining_path && route_to.is_a?(Doze::Router)
-        route_to, base_uri, remaining_path = route_to.perform_routing(remaining_path, session, base_uri)
-      elsif !remaining_path && route_to.is_a?(Doze::Resource)
-        return route_to
-      else
-        return
-      end
     end
   end
 end
