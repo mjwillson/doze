@@ -28,11 +28,8 @@ class Doze::Request < Rack::Request
   def entity
     return @entity if defined?(@entity)
     @entity = if media_type
-      body = @env['rack.input']; @data = ''
-      while (result = body.read(4096))
-        @data << result
-      end
-      media_type.new_entity_from_binary_data(@data, :encoding => content_charset)
+      body = @env['rack.input'].read
+      media_type.new_entity_from_binary_data(body, :encoding => content_charset)
     end
   end
 
