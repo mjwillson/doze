@@ -1,6 +1,7 @@
 require 'doze/serialization/json'
 require 'doze/serialization/yaml'
 require 'doze/serialization/www_form_encoded'
+require 'doze/serialization/multipart_form_data'
 require 'doze/serialization/html'
 
 # A resource whose representations are all serializations of some ruby data.

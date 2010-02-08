@@ -117,4 +117,36 @@ class SerializationTest < Test::Unit::TestCase
     assert_equal @ruby_data.to_yaml, last_response.body
     assert_equal 'application/vnd.foo.bar+yaml', last_response.media_type
   end
+
+  def test_put_multipart
+    root.expects(:supports_put?).returns(true)
+    root.expects(:put).with do |entity|
+      puts entity.object_data.inspect
+      entity.object_data["z"] == {"y" => "x"} and
+      file = entity.object_data["x"] and
+      file.is_a?(Hash) and
+      file["filename"] == "test.html" and
+      file["media_type"] == "text/html" and
+      file["tempfile"].read == "<html>test</html>" and
+      File.read(file["temp_path"]) == "<html>test</html>"
+    end
+
+    boundary = "----------------------------0ef440f6b22e"
+    body = <<END
+------------------------------0ef440f6b22e
+Content-Disposition: form-data; name="z[y]"
+
+x
+------------------------------0ef440f6b22e
+Content-Disposition: form-data; name="x"; filename="test.html"
+Content-Type: text/html
+
+<html>test</html>
+------------------------------0ef440f6b22e--
+END
+    body = body.gsub(/\r?\n/, "\r\n")
+
+    put('CONTENT_TYPE' => "multipart/form-data; boundary=#{boundary}", :input => body)
+    assert_equal STATUS_NO_CONTENT, last_response.status
+  end
 end

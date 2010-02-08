@@ -13,7 +13,7 @@ require 'digest/md5'
 class Doze::Entity
   DEFAULT_TEXT_ENCODING = 'iso-8859-1'
 
-  attr_reader :binary_data, :media_type, :encoding, :language
+  attr_reader :media_type, :media_type_params, :encoding, :language, :binary_data_length
 
   # Used when constructing a HTTP response from this entity
   # For when you need to specify extra entity-content-specific HTTP headers to be included when
@@ -26,9 +26,11 @@ class Doze::Entity
   def initialize(media_type, options={}, &lazy_binary_data)
     @binary_data = options[:binary_data]
     @binary_data_stream = options[:binary_data_stream]
+    @binary_data_length = options[:binary_data_length]
     @lazy_binary_data = options[:lazy_binary_data] || lazy_binary_data
 
     @media_type = media_type
+    @media_type_params = options[:media_type_params] || {}
     @encoding   = options[:encoding] || (DEFAULT_TEXT_ENCODING if @media_type.major == 'text')
     @language   = options[:language]
     @extra_content_headers = options[:extra_content_headers] || {}
