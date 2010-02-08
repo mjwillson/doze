@@ -25,6 +25,7 @@ class Doze::Entity
 
   def initialize(media_type, options={}, &lazy_binary_data)
     @binary_data = options[:binary_data]
+    @binary_data_stream = options[:binary_data_stream]
     @lazy_binary_data = options[:lazy_binary_data] || lazy_binary_data
 
     @media_type = media_type
@@ -33,11 +34,18 @@ class Doze::Entity
     @extra_content_headers = options[:extra_content_headers] || {}
   end
 
+  def binary_data_stream
+    @binary_data_stream ||= if @binary_data
+      StringIO.new(@binary_data)
+    end
+  end
+
   def binary_data
     @binary_data ||= if @lazy_binary_data
       @lazy_binary_data.call
-    else
-      raise "must specify either binary_data or lazy_binary_data"
+    elsif @binary_data_stream
+      @binary_data_stream.rewind if @binary_data_stream.respond_to?(:rewind)
+      @binary_data_stream.read
     end
   end
 

@@ -13,7 +13,11 @@ class NonGetMethodTest < Test::Unit::TestCase
 
   def test_put_with_unacceptable_media_type
     root.expects(:supports_put?).returns(true)
-    root.expects(:accepts_put_with_media_type?).with {|a| a.is_a?(Doze::Entity) && a.media_type == @foo}.returns(false)
+    root.expects(:accepts_put_with_media_type?).with do |a|
+      a.is_a?(Doze::Entity) && a.media_type == @foo &&
+      a.binary_data_stream.respond_to?(:read) && a.binary_data_stream.read == 'foo' &&
+      a.binary_data == 'foo'
+    end.returns(false)
     root.expects(:put).never
     put('CONTENT_TYPE' => 'text/foo', :input => 'foo')
     assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
