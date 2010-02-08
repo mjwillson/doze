@@ -14,9 +14,10 @@ module Doze::Serialization
   #
   # These enable it to be used interchangably with nginx upload module if you use config like eg:
   #
-  # upload_set_form_field $upload_field_name[name] "$upload_file_name";
+  # upload_set_form_field $upload_field_name[filename] "$upload_file_name";
   # upload_set_form_field $upload_field_name[media_type] "$upload_content_type";
   # upload_set_form_field $upload_field_name[temp_path] "$upload_tmp_path";
+  # upload_aggregate_form_field $upload_field_name[size] "$upload_file_size";
   #
   class Entity::MultipartFormData < Entity
     include FormDataHelpers
