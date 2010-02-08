@@ -15,7 +15,7 @@ class Doze::MockResource
   end
 
   def get
-    Doze::Entity.new(Doze::MediaType['text/html'], @binary_data)
+    Doze::Entity.new(Doze::MediaType['text/html'], :binary_data => @binary_data)
   end
 end
 
@@ -74,7 +74,7 @@ module Doze::TestCase
 
   def mock_entity(binary_data, media_type='text/html', language=nil)
     media_type = Doze::MediaType[media_type] if media_type.is_a?(String)
-    Doze::Entity.new(media_type, binary_data, :language => language)
+    Doze::Entity.new(media_type, :binary_data => binary_data, :language => language)
   end
 
   def mock_resource(*p); Doze::MockResource.new(*p); end

@@ -92,9 +92,9 @@ class Doze::MediaType
     self.class.register(name, options)
   end
 
-  # Create a new entity of this media_type from binary data. Uses entity_class
-  def new_entity_from_binary_data(*p, &b)
-    @entity_class.new_from_binary_data(self, *p, &b)
+  # Create a new entity of this media_type. Uses entity_class
+  def new_entity(options, &b)
+    @entity_class.new(self, options, &b)
   end
 
   def matches_prefix?(prefix)

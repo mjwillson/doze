@@ -2,18 +2,10 @@ require 'doze/entity'
 
 module Doze::Serialization
   class Entity < Doze::Entity
-    def self.new_from_binary_data(media_type, binary_data, options={})
-      new(media_type, binary_data, nil, options={})
-    end
-
-    def self.new_from_object_data(media_type, object_data=nil, options={}, &lazy_object_data)
-      new(media_type, nil, object_data, options, &lazy_object_data)
-    end
-
-    def initialize(media_type, binary_data=nil, object_data=nil, options={}, &lazy_object_data)
-      super(media_type, binary_data, options)
-      @object_data = object_data
-      @lazy_object_data = lazy_object_data
+    def initialize(media_type, options={}, &lazy_object_data)
+      super(media_type, options)
+      @object_data = options[:object_data]
+      @lazy_object_data = lazy_object_data || options[:lazy_object_data]
     end
 
     def object_data

@@ -23,9 +23,9 @@ class Doze::Entity
 
   class << self; alias :new_from_binary_data :new; end
 
-  def initialize(media_type, binary_data=nil, options={}, &lazy_binary_data)
-    @binary_data = binary_data
-    @lazy_binary_data = lazy_binary_data
+  def initialize(media_type, options={}, &lazy_binary_data)
+    @binary_data = options[:binary_data]
+    @lazy_binary_data = options[:lazy_binary_data] || lazy_binary_data
 
     @media_type = media_type
     @encoding   = options[:encoding] || (DEFAULT_TEXT_ENCODING if @media_type.major == 'text')

@@ -41,13 +41,13 @@ class SerializationTest < Test::Unit::TestCase
 
   def test_json_serialization
     media_type = Doze::Serialization::JSON
-    entity = media_type.entity_class.new_from_object_data(media_type, {'foo' => 'bar'})
+    entity = media_type.entity_class.new(media_type, :object_data => {'foo' => 'bar'})
     assert_equal '{"foo":"bar"}', entity.binary_data
   end
 
   def test_form_encoding_serialization
     media_type = Doze::Serialization::WWW_FORM_ENCODED
-    entity = media_type.entity_class.new_from_object_data(media_type, {'foo' => {'bar' => '='}, 'baz' => '3'})
+    entity = media_type.entity_class.new(media_type, :object_data => {'foo' => {'bar' => '='}, 'baz' => '3'})
     assert ['foo[bar]=%3D&baz=3', 'baz=3&foo[bar]=%3D'].include?(entity.binary_data)
   end
 

@@ -40,7 +40,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_custom_error_resource
     e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found')
     CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found', anything).returns(e).once
-    entity = Doze::Entity.new(Doze::MediaType['text/html'], "foo bar baz")
+    entity = Doze::Entity.new(Doze::MediaType['text/html'], :binary_data => "foo bar baz")
     e.expects(:get).returns(entity).once
 
     root.expects(:exists?).returns(false).at_least_once
