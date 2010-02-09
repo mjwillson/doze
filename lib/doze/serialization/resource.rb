@@ -19,7 +19,7 @@ module Doze::Serialization
 
     def get
       serialization_media_types.map do |media_type|
-        media_type.entity_class.new(media_type, :lazy_object_data => method(:get_data))
+        media_type.entity_class.new(media_type, :lazy_object_data => proc {get_data})
       end
     end
 
