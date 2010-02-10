@@ -97,6 +97,10 @@ class Doze::MediaType
     @entity_class.new(self, options, &b)
   end
 
+  def subtype?(other)
+    @matches_names.include?(other.name)
+  end
+
   def matches_prefix?(prefix)
     @matches_names.any? {|name| name.start_with?(prefix)}
   end
