@@ -3,7 +3,7 @@ require 'doze/entity'
 module Doze::Serialization
   class Entity < Doze::Entity
     def initialize(media_type, options={}, &lazy_object_data)
-      super(media_type, options)
+      super(media_type, options, &nil)  # ruby quirk: blocks are implicitely passed to super
       @object_data = options[:object_data]
       @lazy_object_data = lazy_object_data || options[:lazy_object_data]
     end
