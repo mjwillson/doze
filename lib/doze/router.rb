@@ -50,7 +50,8 @@ module Doze::Router
 
   # If this particular router instance has a uri prefix associated with it
   def router_uri_prefix
-    @uri && @uri.chomp('/')
+    u = uri()
+    u && u.chomp('/')
   end
 
   def router_uri_prefix=(uri_prefix)
