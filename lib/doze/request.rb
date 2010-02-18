@@ -22,7 +22,7 @@ class Doze::Request < Rack::Request
   # http://bulknews.typepad.com/blog/2009/09/path_info-decoding-horrors.html
   # http://java.sun.com/j2ee/sdk_1.3/techdocs/api/javax/servlet/http/HttpServletRequest.html#getPathInfo%28%29
   def raw_path_info
-    ((servlet_request = @env['java.servlet.request']) &&
+    ((servlet_request = @env['java.servlet_request']) &&
       raw_path_info_from_servlet_request(servlet_request)) || path_info
   end
 

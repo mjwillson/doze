@@ -3,7 +3,7 @@ class Doze::Responder::Main < Doze::Responder
   def response
     resource = nil
     route_to = @app.root
-    remaining_path = @request.path_info
+    remaining_path = @request.raw_path_info
     remaining_path = nil if remaining_path.empty? || remaining_path == '/'
     session = @request.session
     base_uri = ''
@@ -25,7 +25,7 @@ class Doze::Responder::Main < Doze::Responder
     if resource
       Doze::Responder::Resource.new(@app, @request, resource).response
     elsif @request.options?
-      if @request.path_info == '*'
+      if @request.raw_path_info == '*'
         # Special response for "OPTIONS *" as in HTTP spec:
         rec_methods = (@app.config[:recognized_methods] + [:head, :options]).join(', ').upcase
         Doze::Response.new(STATUS_NO_CONTENT, 'Allow' => rec_methods)

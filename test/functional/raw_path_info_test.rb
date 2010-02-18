@@ -19,7 +19,7 @@ class RawPathInfoTest < Test::Unit::TestCase
 
     app = stub()
     env = stub()
-    env.stubs(:[]).with('java.servlet.request').returns(s_request)
+    env.stubs(:[]).with('java.servlet_request').returns(s_request)
     Doze::Request.new(app, env)
   end
 
@@ -41,7 +41,7 @@ class RawPathInfoTest < Test::Unit::TestCase
   def test_servlet_is_missing
     app = stub()
     env = stub()
-    env.stubs(:[]).with('java.servlet.request').returns(nil)
+    env.stubs(:[]).with('java.servlet_request').returns(nil)
     dr = Doze::Request.new(app, env)
     dr.expects(:path_info).twice.returns("/omg/im/a/path")
     assert_equal dr.raw_path_info, dr.path_info
