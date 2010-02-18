@@ -16,6 +16,16 @@ class Doze::Request < Rack::Request
     method == 'HEAD' ? 'get' : method.downcase
   end
 
+  # At this stage, we only care that the servlet spec says PATH_INFO is decoded so special case
+  # it.  There might be others needed, but webrick and thin return an encoded PATH_INFO so this'll
+  # do for now.
+  # http://bulknews.typepad.com/blog/2009/09/path_info-decoding-horrors.html
+  # http://java.sun.com/j2ee/sdk_1.3/techdocs/api/javax/servlet/http/HttpServletRequest.html#getPathInfo%28%29
+  def raw_path_info
+    ((servlet_request = @env['java.servlet.request']) &&
+      raw_path_info_from_servlet_request(servlet_request)) || path_info
+  end
+
   def get_or_head?
     method = @env["REQUEST_METHOD"]
     method == "GET" || method == "HEAD"
@@ -50,4 +60,25 @@ class Doze::Request < Rack::Request
   def session_authenticated?
     @session_authenticated ||= (session && @app.config[:session_authenticated].call(session))
   end
+
+  private
+
+    URL_CHUNK = /^\/[^\/]+/
+    URL_UP_TO_URI = /^(\w)+:\/\/[\w0-9\-]+(:[0-9]+)?/
+
+    def raw_path_info_from_servlet_request(servlet_request)
+      # servlet spec decodes the path info, we want an unencoded version
+      # fortunately getRequestURL is unencoded, but includes extra stuff - chop it off
+      sb = servlet_request.getRequestURL.toString
+      # chomp off the proto, host and optional port
+      sb = sb.gsub(URL_UP_TO_URI, "")
+
+      # chop off context path if one is specified - not sure if this is desired behaviour
+      # but conforms to servlet spec
+      if servlet_request.getContextPath == ""
+        sb
+      else
+        sb.gsub(URL_CHUNK, "")
+      end
+    end
 end
