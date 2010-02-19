@@ -6,8 +6,10 @@ module Doze::Resource
   # in order to create links to the object for Location headers, links etc.
   # Also see Router (and note that a Resource can also act as a Router for its subresources)
 
-  # The URI path of this resource
-  attr_reader :uri
+  # The URI path of this resource.
+  # #uri= may be used by propagate_static_routes when a resource which is also a router, is statically routed to.
+  # you can private :uri= if you don't want it writeable, however.
+  attr_accessor :uri
 
   # Wraps up the URI path of this resource as a URI::Generic
   def uri_object

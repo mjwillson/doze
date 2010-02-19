@@ -185,6 +185,9 @@ class RouterDefaultImplementationTest < Test::Unit::TestCase
     end
 
     root_router.propagate_static_routes("/foo")
+
+    assert_equal "/foo", root_router.router_uri_prefix
+
     assert_equal "/foo/bar", klass.router_uri_prefix
     assert_equal "/foo/bar", klass.new.router_uri_prefix
     assert_equal "/foo/baz", router.router_uri_prefix
