@@ -63,9 +63,12 @@ class Doze::Request < Rack::Request
 
   private
 
-    URL_CHUNK = /^\/[^\/]+/
-    URL_UP_TO_URI = /^(\w)+:\/\/[\w0-9\-]+(:[0-9]+)?/
+    URL_CHUNK = /^\/[^\/\?]+/
+    URL_UP_TO_URI = /^(\w)+:\/\/[\w0-9\-\.]+(:[0-9]+)?/
+    URL_SEARCHPART = /\?.+$/
 
+    # FIXME - This doesn't do anything with the script name, which will cause trouble
+    # if one is specified
     def raw_path_info_from_servlet_request(servlet_request)
       # servlet spec decodes the path info, we want an unencoded version
       # fortunately getRequestURL is unencoded, but includes extra stuff - chop it off
@@ -74,11 +77,11 @@ class Doze::Request < Rack::Request
       sb = sb.gsub(URL_UP_TO_URI, "")
 
       # chop off context path if one is specified - not sure if this is desired behaviour
-      # but conforms to servlet spec
+      # but conforms to servlet spec and then remove the search part
       if servlet_request.getContextPath == ""
         sb
       else
         sb.gsub(URL_CHUNK, "")
-      end
+      end.gsub(URL_SEARCHPART, "")
     end
 end
