@@ -13,7 +13,7 @@ module Doze::Resource
 
   # Wraps up the URI path of this resource as a URI::Generic
   def uri_object
-    URI::Generic.build(:path => uri)
+    uri && URI::Generic.build(:path => uri)
   end
 
 

@@ -51,9 +51,10 @@ module Doze::Router
   # If this particular router instance has a uri prefix associated with it.
   # Will use a resource's URI method where available, for the common case where the router is also a resource
   def router_uri_prefix
-    return @router_uri_prefix if defined?(@router_uri_prefix)
-    u = respond_to?(:uri) ? uri : nil
-    @router_uri_prefix = u && u.chomp('/')
+    @router_uri_prefix ||= begin
+      u = respond_to?(:uri) ? uri : nil
+      u && u.chomp('/')
+    end
   end
 
   # Used primarily by propagate_static_routes. As a (desired) side-effect, will also set the uri using #uri=
