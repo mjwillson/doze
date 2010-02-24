@@ -75,7 +75,10 @@ module Doze::Router
   module ClassMethods
     include Doze::Router::AnchoredRouteSet
 
-    attr_reader :router_uri_prefix
+    def router_uri_prefix
+      return @router_uri_prefix if defined?(@router_uri_prefix)
+      @router_uri_prefix = (superclass.respond_to?(:router_uri_prefix) ? superclass.router_uri_prefix : nil)
+    end
 
     def router_uri_prefix=(uri)
       @router_uri_prefix = uri
