@@ -1,5 +1,10 @@
 require 'doze'
 require 'doze/media_type'
+
+# works around this error when newer test-unit gem present:
+# http://stackoverflow.com/questions/1145318/getting-uninitialized-constant-error-when-trying-to-run-tests
+begin; gem 'test-unit'; rescue NoMethodError, LoadError; end
+
 require 'test/unit'
 require 'rack/test'
 require 'mocha'

@@ -23,8 +23,8 @@ class Doze::Resource::Proxy
   def try(method, *args, &block)
     if respond_to?(method)
       send(method, *args, &block)
-    elsif @target.respond_to?(method)
-      @target && @target.send(method, *args, &block)
+    elsif target.respond_to?(method)
+      target && target.send(method, *args, &block)
     end
   end
 
@@ -33,7 +33,7 @@ class Doze::Resource::Proxy
     if respond_to?(supports_method)
       send(supports_method)
     else
-      @target && @target.supports_method?(method)
+      target && target.supports_method?(method)
     end
   end
 
@@ -41,7 +41,7 @@ class Doze::Resource::Proxy
     if respond_to?(method_name)
       send(method_name, entity)
     else
-      @target && @target.other_method(method_name, entity)
+      target && target.other_method(method_name, entity)
     end
   end
 
@@ -50,20 +50,20 @@ class Doze::Resource::Proxy
     if respond_to?(method_name)
       send(method_name, entity)
     else
-      @target && @target.accepts_method_with_media_type?(resource_method, entity)
+      target && target.accepts_method_with_media_type?(resource_method, entity)
     end
   end
 
   # Some methods which should return something other than nil by default for an empty target:
 
   def authorize(user, method)
-    @target ? @target.authorize(user, method) : true
+    target ? target.authorize(user, method) : true
   end
 
   # Other methods which we can proxy generically
 
   proxied_methods = Doze::Resource.public_instance_methods(true) - ['uri', 'uri_object'] - self.public_instance_methods(false)
   proxied_methods.each do |method|
-    module_eval("def #{method}(*args, &block); @target && @target.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
+    module_eval("def #{method}(*args, &block); t = target and t.__send__(:#{method}, *args, &block); end", __FILE__, __LINE__)
   end
 end
