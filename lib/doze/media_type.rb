@@ -51,9 +51,13 @@ class Doze::MediaType
     names.each do |n|
       raise "Attempt to register media_type name #{n} twice" if NAME_LOOKUP.has_key?(n)
       NAME_LOOKUP[n] = self
-      BY_EXTENSION[@extension] = self if @extension
     end
+    register_extension!
     self
+  end
+
+  def register_extension!
+    BY_EXTENSION[@extension] = self if @extension
   end
 
   def self.[](name)

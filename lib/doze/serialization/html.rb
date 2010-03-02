@@ -108,5 +108,5 @@ END
   # A browser-friendly media type for use with Doze::Serialization::Resource.
   # We don't register it, since you might not want to use it for submitted html entities,
   # but you can call register! on it yourself if you do
-  HTML = Doze::MediaType.new('text/html', :entity_class => Entity::HTML)
+  HTML = Doze::MediaType.new('text/html', :entity_class => Entity::HTML, :extension => 'html')
 end

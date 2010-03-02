@@ -25,5 +25,5 @@ module Doze::Serialization
     end
   end
 
-  JSON = Doze::MediaType.register('application/json', :plus_suffix => 'json', :entity_class => Entity::JSON)
+  JSON = Doze::MediaType.register('application/json', :plus_suffix => 'json', :entity_class => Entity::JSON, :extension => 'json')
 end

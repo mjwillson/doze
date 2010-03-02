@@ -18,5 +18,5 @@ module Doze::Serialization
     end
   end
 
-  YAML = Doze::MediaType.register('application/yaml', :plus_suffix => 'yaml', :entity_class => Entity::YAML)
+  YAML = Doze::MediaType.register('application/yaml', :plus_suffix => 'yaml', :entity_class => Entity::YAML, :extension => 'yaml')
 end
