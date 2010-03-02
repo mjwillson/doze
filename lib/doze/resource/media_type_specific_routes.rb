@@ -8,7 +8,7 @@ module Doze::Resource::MediaTypeSpecificRoutes
 
     Doze::Router.included(mod)
 
-    mod.route "/data.{extension}", :name => 'specific_media_type', :regexps => {:extension => /[a-z0-9]+/} do |router, uri, params|
+    mod.route "/data.{extension}", :name => 'specific_media_type', :regexps => {:extension => /[a-z0-9_]+/} do |router, uri, params|
       media_type = Doze::MediaType::BY_EXTENSION[params[:extension]]
       media_type && router.media_type_specific_proxy(media_type, uri)
     end
