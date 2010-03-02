@@ -127,14 +127,14 @@ end
 module Doze::MediaTypeTestCase
   def setup
     @media_type_name_lookup = Doze::MediaType::NAME_LOOKUP.dup
+    @media_type_by_extension = Doze::MediaType::BY_EXTENSION.dup
     super
   end
 
   def teardown
-    $VERBOSE = nil
-    Doze::MediaType.const_set('NAME_LOOKUP', @media_type_name_lookup)
-    $VERBOSE = false
     super
+    Doze::MediaType::NAME_LOOKUP.replace(@media_type_name_lookup)
+    Doze::MediaType::BY_EXTENSION.replace(@media_type_by_extension)
   end
 end
 

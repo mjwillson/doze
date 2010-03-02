@@ -6,8 +6,8 @@ module Doze::Router
 
   include Doze::Router::AnchoredRouteSet
 
-  def self.included(klass)
-    klass.extend(ClassMethods)
+  def self.included(mod)
+    mod.extend(ClassMethods) if mod.is_a?(Class) # if you include this in another module, its self.included should call this one
   end
 
   # The main method of the Router interface.

@@ -1,5 +1,6 @@
 class Doze::MediaType
   NAME_LOOKUP = {}
+  BY_EXTENSION = {}
 
   # Names for this media type.
   # Names should uniquely identify the media type, so eg [audio/x-mpeg3, audio/mp3] might both be names of one
@@ -30,6 +31,13 @@ class Doze::MediaType
   # see register_derived_type
   attr_reader :plus_suffix
 
+  # Media type may be associated with a particular file extension, eg image/jpeg with .jpeg
+  # Registered media types may be looked up by extension, eg this is used by MediaTypeSpecificRoutes.
+  #
+  # If you register more than one media type with the same extension the most recent one will
+  # take priority, ie probably best not to do this.
+  attr_reader :extension
+
   # Creates and registers a media_type instance by its names for lookup via [].
   # This means this instance will be used when a client submits an entity with any of the given
   # names.
@@ -43,6 +51,7 @@ class Doze::MediaType
     names.each do |n|
       raise "Attempt to register media_type name #{n} twice" if NAME_LOOKUP.has_key?(n)
       NAME_LOOKUP[n] = self
+      BY_EXTENSION[@extension] = self if @extension
     end
     self
   end
@@ -58,6 +67,7 @@ class Doze::MediaType
   #   :also_matches :: extra names to add to matches_names, in addition to names and output_name
   #   :entity_class
   #   :plus_suffix
+  #   :extension
   def initialize(name, options={})
     @names = [name]
     @names.push(*options[:aliases]) if options[:aliases]
@@ -71,6 +81,8 @@ class Doze::MediaType
 
     @entity_class = options[:entity_class] || Doze::Entity
     @plus_suffix = options[:plus_suffix]
+
+    @extension = options[:extension]
   end
 
   def major
