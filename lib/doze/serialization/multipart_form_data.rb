@@ -140,7 +140,7 @@ module Doze::Serialization
         tempfile = File.open(meta["temp_path"], "rb")
       end
       return unless tempfile
-      entity = Doze::Entity.new(media_type, :binary_data_stream => tempfile, :binary_data_length => size)
+      entity = media_type.new_entity(:binary_data_stream => tempfile, :binary_data_length => size)
 
       return entity unless block_given?
       begin
