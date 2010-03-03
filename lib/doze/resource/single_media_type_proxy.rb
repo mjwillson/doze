@@ -37,8 +37,8 @@ class Doze::Resource::SingleMediaTypeProxy < Doze::Resource::Proxy
     end
   end
 
-  def post(*p)
-    result = target.post(*p)
+  def post(entity, session)
+    result = super
     case result
     when Doze::Resource
       Doze::Resource::SingleMediaTypeProxy.new(result.uri, result, @media_type)

@@ -54,6 +54,18 @@ class Doze::Resource::Proxy
     end
   end
 
+  # proxying post is a bit fiddly due to the (in retrospect perhaps a bit unadvised) convenience support for
+  # different method arities for post.
+  # maybe move to post_with_session(entity, session) vs post(entity) if this causes any more pain.
+  def post(entity, session)
+    t = target or return
+    if t.method(:post).arity.abs > 1
+      t.post(entity, session)
+    else
+      t.post(entity)
+    end
+  end
+
   # Some methods which should return something other than nil by default for an empty target:
 
   def authorize(user, method)
