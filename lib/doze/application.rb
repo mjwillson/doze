@@ -8,8 +8,6 @@ require 'doze/resource'
 require 'doze/entity'
 require 'doze/resource/error'
 require 'doze/resource/proxy'
-require 'doze/resource/single_media_type_proxy'
-require 'doze/resource/media_type_specific_routes'
 require 'doze/request'
 require 'doze/response'
 require 'doze/responder'
@@ -48,7 +46,17 @@ class Doze::Application
     # Used to determine whether the user/session object obtained via :session_from_rack_env is to be treated as authenticated or not.
     # By default this looks for a key :user within a session object.
     # For eg env['REMOTE_USER'] the session is the authenticated username and you probably just want to test for !session.nil?
-    :session_authenticated => proc {|session| !session[:user].nil?}
+    :session_authenticated => proc {|session| !session[:user].nil?},
+
+    # Doze has a special facility to use a file extension style suffix on the URI.
+    # Instead of passing this file extension through the routing process, it is dropped from the routed URI
+    # and handled specially, effectively overriding the Accept header for that request and forcing a response
+    # with the media type in question.
+    # Relies on media types being registered by extension, see Doze::MediaType.
+    # NB: if you enable this setting, be aware that extensions are stripped prior to routing, so you will
+    # lose the ability to route based on file extensions, and must be careful to escape the extension delimiter (".")
+    # when putting a text fragment for matching at the end of a uri.
+    :media_type_extensions => false
   }
 
   attr_reader :config, :root, :logger

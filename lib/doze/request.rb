@@ -61,6 +61,38 @@ class Doze::Request < Rack::Request
     @session_authenticated ||= (session && @app.config[:session_authenticated].call(session))
   end
 
+  EXTENSION_REGEXP = /\.([a-z0-9\-_]+)$/
+
+  # splits the raw_path_info into a routing path, and an optional file extension for use with
+  # special media-type-specific file extension handling (where :media_type_extensions => true
+  # configured on the app)
+  def routing_path_and_extension
+    @routing_path_and_extension ||= begin
+      path = raw_path_info
+      extension = nil
+
+      if @app.config[:media_type_extensions] && (match = EXTENSION_REGEXP.match(path))
+        path = match.pre_match
+        extension = match[1]
+      end
+
+      [path, extension]
+    end
+  end
+
+  def routing_path
+    routing_path_and_extension[0]
+  end
+
+  def extension
+    routing_path_and_extension[1]
+  end
+
+  # Makes a Doze::Negotiator to do content negotiation on behalf of this request
+  def negotiator(ignore_unacceptable_accepts=false)
+    Doze::Negotiator.new(self, ignore_unacceptable_accepts)
+  end
+
   private
 
     URL_CHUNK = /^\/[^\/\?]+/

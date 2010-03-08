@@ -1,12 +1,28 @@
-# A negotiator is passed to a resource on behalf of a request, and will choose the entity it prefers from options offered to it by the resource.
-# You can ask it to give you a quality value, or to choose from a list of options. It'll choose from media_types, languages, or combinations of the two.
+# A Negotiator handles content negotiation on behalf of a client request.
+# It will choose the entity it prefers from a list of options offered to it.
+# You can ask it to give you a quality value, or to choose from a list of options.
+# It'll choose from media_types, languages, or combinations of the two.
 class Doze::Negotiator
   def initialize(request, ignore_unacceptable_accepts=false)
-    accept_header = request.env['HTTP_ACCEPT']
     @ignore_unacceptable_accepts = ignore_unacceptable_accepts
-    @media_type_criterea = if accept_header
+
+    @media_type_criterea = if (ext = request.extension)
+      # if the request extension requests a specific media type, this overrides any Accept header and is
+      # interpreted as a demand for this media type and this one only.
+      media_type = Doze::MediaType::BY_EXTENSION[ext]
+      if media_type
+        [[media_type.name, 2, 1.0]]
+      else
+        # if there's a request extension but we can't find a media type for it, we interpret this as an
+        # 'impossible demand' that will match nothing
+        []
+      end
+
+    elsif (accept_header = request.env['HTTP_ACCEPT'])
       parse_accept_header(accept_header) {|range| matcher_from_media_range(range)}.sort_by {|matcher,specificity,q| -specificity}
+
     else
+      # No Accept header - anything will do
       [[Object, 0, 1.0]]
     end
 

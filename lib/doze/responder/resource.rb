@@ -169,7 +169,7 @@ class Doze::Responder::Resource < Doze::Responder
   def get_preferred_representation(response=nil)
     representation = @resource.get
     if representation.is_a?(Array)
-      negotiator = Doze::Negotiator.new(@request, @options[:ignore_unacceptable_accepts])
+      negotiator = @request.negotiator(@options[:ignore_unacceptable_accepts])
 
       if response
         # If the available representation entities differ by media type, add a Vary: Accept. similarly for language.
@@ -177,7 +177,11 @@ class Doze::Responder::Resource < Doze::Responder
         response.add_header_values('Vary', 'Accept-Language') if not_all_equal?(representation.map {|e| e.language})
       end
 
-      negotiator.choose_entity(representation) or raise_error(STATUS_NOT_ACCEPTABLE)
+      # If we fail to find the requested media type when requested via a file extension (/foo.jpeg) the appropriate HTTP status
+      # is 404; at the HTTP level this is effectively a separate media-type-specific version of the resource at its own uri,
+      # which doesn't exist due to the particular media-type-specific version of the resource not being available.
+      # If we fail due to an Accept header not matching anything, of course the appropriate status is STATUS_NOT_ACCEPTABLE
+      negotiator.choose_entity(representation) or raise_error(@request.extension ? STATUS_NOT_FOUND : STATUS_NOT_ACCEPTABLE)
     else
       representation
     end

@@ -3,12 +3,13 @@ class Doze::Responder::Main < Doze::Responder
   def response
     resource = nil
     route_to = @app.root
-    remaining_path = @request.raw_path_info
+    remaining_path = @request.routing_path
     remaining_path = nil if remaining_path.empty? || remaining_path == '/'
     session = @request.session
     base_uri = ''
 
     # main routing loop - results in either a final Resource which has been routed to, or nil
+    # todo: maybe something recursive would be a bit more readable here
     while true
       if remaining_path && route_to.is_a?(Doze::Router)
         # Bail early with a 401 or 403 if the router refuses to authorize further routing

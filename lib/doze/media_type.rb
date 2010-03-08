@@ -32,7 +32,8 @@ class Doze::MediaType
   attr_reader :plus_suffix
 
   # Media type may be associated with a particular file extension, eg image/jpeg with .jpeg
-  # Registered media types may be looked up by extension, eg this is used by MediaTypeSpecificRoutes.
+  # Registered media types may be looked up by extension, eg this is used when :media_type_extensions
+  # is enabled on the application.
   #
   # If you register more than one media type with the same extension the most recent one will
   # take priority, ie probably best not to do this.
