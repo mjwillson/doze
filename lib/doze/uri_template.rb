@@ -1,4 +1,6 @@
 # Implements a subset of URI template spec.
+# This is somewhat optimised for fast matching and generation of URI strings, although probably
+# a fair bit of mileage still to be gotten out of it.
 class Doze::URITemplate
   def self.compile(string, var_regexps={})
     is_varexp = true
@@ -27,7 +29,7 @@ class Doze::URITemplate
     @start_anchored_regexp ||= Regexp.new("^#{regexp_fragment}")
   end
 
-  def parts; [self]; end
+  def parts; @parts ||= [self]; end
 
   def +(other)
     other = String.new(other.to_s) unless other.is_a?(Doze::URITemplate)
@@ -47,7 +49,8 @@ class Doze::URITemplate
     match = anchored_regexp.match(uri) or return
     result = {}; vars = variables
     match.captures.each_with_index do |cap,i|
-      cap = Rack::Utils.unescape(cap) if unescape
+      # inlines Doze::Utils.unescape, but with gsub! rather than gsub
+      cap.gsub!(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')} if unescape
       result[vars[i]] = cap
     end
     result
@@ -57,7 +60,8 @@ class Doze::URITemplate
     match = start_anchored_regexp.match(uri) or return
     result = {}; vars = variables
     match.captures.each_with_index do |cap,i|
-      cap = Rack::Utils.unescape(cap) if unescape
+      # inlines Doze::Utils.unescape, but with gsub! rather than gsub
+      cap.gsub!(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')} if unescape
       result[vars[i]] = cap
     end
     trailing = match.post_match
@@ -83,22 +87,21 @@ class Doze::URITemplate
       "{#{@name}}"
     end
 
-    def variables; [@name]; end
+    def variables; @variables ||= [@name]; end
 
     def expand(vars)
-      Rack::Utils.escape(vars[@name].to_s)
+      Doze::Utils.escape(vars[@name].to_s)
     end
 
     def partially_expand(vars)
       if vars.has_key?(@name)
-        String.new(Rack::Utils.escape(vars[@name].to_s))
+        String.new(Doze::Utils.escape(vars[@name].to_s))
       else
         self
       end
     end
 
     def expand_code_fragment
-      # this inlines some code from Rack::Utils.escape, but turning ' ' into %20 rather than + to save an extra call to tr
       "\#{vars[#{@name.inspect}].to_s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*bytesize($1)).join('%').upcase}}"
     end
   end
@@ -125,7 +128,8 @@ class Doze::URITemplate
 
     def partially_expand(vars); self; end
 
-    def variables; []; end
+    NO_VARS = [].freeze
+    def variables; NO_VARS; end
 
     def expand_code_fragment
       @string.inspect[1...-1]
@@ -155,7 +159,7 @@ class Doze::URITemplate
     end
 
     def variables
-      @parts.map {|p| p.variables}.flatten
+      @variables ||= @parts.map {|p| p.variables}.flatten
     end
 
     def expand_code_fragment

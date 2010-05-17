@@ -25,6 +25,18 @@ module Doze::Utils
     '"' << str.gsub(/[\\\"]/o, "\\\1") << '"'
   end
 
+  # Rack::Utils.escape, but turning ' ' into '%20' rather than '+' (which is not a necessary part of the URI spec) to save an extra call to tr.
+  # Also must be passed a string.
+  def escape(s)
+    s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*bytesize($1)).join('%').upcase}
+  end
+
+  # Rack::Utils.unescape, but without turning '+' into ' '
+  # Also must be passed a string.
+  def unescape(s)
+    s.gsub(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')}
+  end
+
   # So utility functions are accessible as Doze::Utils.foo as well as via including the module
   extend self
 end
