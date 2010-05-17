@@ -12,12 +12,14 @@ class Doze::URITemplate
         String.new(bit)
       end
     end
-    parts.length > 1 ? Composite.new(parts) : parts.first
+    template = parts.length > 1 ? Composite.new(parts) : parts.first
+    template.compile_expand!
+    template
   end
 
-  # We compile a ruby string substitution expression for the URI template to make filling out these templates blazing fast.
+  # Compile a ruby string substitution expression for the 'expand' method to make filling out these templates blazing fast.
   # This was actually a bottleneck in some simple cache lookups by list of URIs
-  def initialize
+  def compile_expand!
     instance_eval "def expand(vars); \"#{expand_code_fragment}\"; end", __FILE__, __LINE__
   end
 
@@ -34,11 +36,6 @@ class Doze::URITemplate
   def +(other)
     other = String.new(other.to_s) unless other.is_a?(Doze::URITemplate)
     Composite.new(parts + other.parts)
-  end
-
-  def with_prefix(prefix)
-    prefix = String.new(prefix.to_s) unless prefix.is_a?(Doze::URITemplate)
-    prefix + self
   end
 
   def inspect
@@ -76,7 +73,6 @@ class Doze::URITemplate
 
     def initialize(name, regexp=DEFAULT_REGEXP)
       @name = name; @regexp = regexp
-      super()
     end
 
     def regexp_fragment
@@ -111,7 +107,6 @@ class Doze::URITemplate
 
     def initialize(string)
       @string = string
-      super()
     end
 
     def regexp_fragment
@@ -139,7 +134,6 @@ class Doze::URITemplate
   class Composite < Doze::URITemplate
     def initialize(parts)
       @parts = parts
-      super()
     end
 
     def regexp_fragment
@@ -167,5 +161,25 @@ class Doze::URITemplate
     end
 
     attr_reader :parts
+  end
+
+  # A simple case of Composite where a template is prefixed by a string.
+  # This allows the same compiled URI template to be used with many different prefixes
+  # without having to re-compile the expand method for each of them, or use the slower
+  # default implementation
+  class WithPrefix < Composite
+    def initialize(template, prefix)
+      @template = template
+      @prefix = prefix
+      @parts = [String.new(prefix.to_s), @template]
+    end
+
+    def expand(vars)
+      "#{@prefix}#{@template.expand(vars)}"
+    end
+  end
+
+  def with_prefix(prefix)
+    WithPrefix.new(self, prefix)
   end
 end
