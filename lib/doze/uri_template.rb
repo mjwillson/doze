@@ -13,6 +13,12 @@ class Doze::URITemplate
     parts.length > 1 ? Composite.new(parts) : parts.first
   end
 
+  # We compile a ruby string substitution expression for the URI template to make filling out these templates blazing fast.
+  # This was actually a bottleneck in some simple cache lookups by list of URIs
+  def initialize
+    instance_eval "def expand(vars); \"#{expand_code_fragment}\"; end", __FILE__, __LINE__
+  end
+
   def anchored_regexp
     @anchored_regexp ||= Regexp.new("^#{regexp_fragment}$")
   end
@@ -66,6 +72,7 @@ class Doze::URITemplate
 
     def initialize(name, regexp=DEFAULT_REGEXP)
       @name = name; @regexp = regexp
+      super()
     end
 
     def regexp_fragment
@@ -89,6 +96,11 @@ class Doze::URITemplate
         self
       end
     end
+
+    def expand_code_fragment
+      # this inlines some code from Rack::Utils.escape, but turning ' ' into %20 rather than + to save an extra call to tr
+      "\#{vars[#{@name.inspect}].to_s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*bytesize($1)).join('%').upcase}}"
+    end
   end
 
   class String < Doze::URITemplate
@@ -96,6 +108,7 @@ class Doze::URITemplate
 
     def initialize(string)
       @string = string
+      super()
     end
 
     def regexp_fragment
@@ -113,11 +126,16 @@ class Doze::URITemplate
     def partially_expand(vars); self; end
 
     def variables; []; end
+
+    def expand_code_fragment
+      @string.inspect[1...-1]
+    end
   end
 
   class Composite < Doze::URITemplate
     def initialize(parts)
       @parts = parts
+      super()
     end
 
     def regexp_fragment
@@ -138,6 +156,10 @@ class Doze::URITemplate
 
     def variables
       @parts.map {|p| p.variables}.flatten
+    end
+
+    def expand_code_fragment
+      @parts.map {|p| p.expand_code_fragment}.join
     end
 
     attr_reader :parts
