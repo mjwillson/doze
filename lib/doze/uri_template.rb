@@ -171,7 +171,7 @@ class Doze::URITemplate
     def initialize(template, prefix)
       @template = template
       @prefix = prefix
-      @parts = [String.new(prefix.to_s), @template]
+      @parts = [String.new(prefix.to_s), *@template.parts]
     end
 
     def expand(vars)
