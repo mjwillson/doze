@@ -97,8 +97,12 @@ class Doze::URITemplate
       end
     end
 
+    # String#size under Ruby 1.8 and String#bytesize under 1.9.
+    BYTESIZE_METHOD = ''.respond_to?(:bytesize) ? 'bytesize' : 'size'
+
+    # inlines Doze::Utils.escape (optimised from Rack::Utils.escape) with further effort to avoid an extra method call for bytesize 1.9 compat.
     def expand_code_fragment
-      "\#{vars[#{@name.inspect}].to_s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*bytesize($1)).join('%').upcase}}"
+      "\#{vars[#{@name.inspect}].to_s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*$1.#{BYTESIZE_METHOD}).join('%').upcase}}"
     end
   end
 

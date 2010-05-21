@@ -7,6 +7,7 @@ class URITemplateTest < Test::Unit::TestCase
   def test_match
     a = Doze::URITemplate.compile("/abc/{x}/def")
     assert_equal({:x => '123'}, a.match("/abc/123/def"))
+    assert_equal({:x => ' /'}, a.match("/abc/%20%2F/def"))
     assert_equal([{:x => '123'}, '/abc/123/def', '/ghi'], a.match_with_trailing("/abc/123/def/ghi"))
   end
 
@@ -25,6 +26,7 @@ class URITemplateTest < Test::Unit::TestCase
     a = Doze::URITemplate.compile("/abc/{x}/def/{y}")
     assert_equal("/abc/123/def/", a.expand(:x => 123))
     assert_equal("/abc/123/def/456", a.expand(:x => 123, :y => 456))
+    assert_equal("/abc/123/def/%20%2F", a.expand(:x => 123, :y => ' /'))
   end
 
   def test_partial_expand
