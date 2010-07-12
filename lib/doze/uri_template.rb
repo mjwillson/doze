@@ -6,8 +6,13 @@ class Doze::URITemplate
     is_varexp = true
     parts = string.split(/\{(.*?)\}/).map do |bit|
       if (is_varexp = !is_varexp)
-        var = bit.to_sym
-        Variable.new(var, var_regexps[var] || Variable::DEFAULT_REGEXP)
+        case bit
+        when /^\/(.*).quadhexbytes\*$/
+          QuadHexBytesVariable.new($1.to_sym)
+        else
+          var = bit.to_sym
+          Variable.new(var, var_regexps[var] || Variable::DEFAULT_REGEXP)
+        end
       else
         String.new(bit)
       end
@@ -42,24 +47,20 @@ class Doze::URITemplate
     "#<#{self.class} #{to_s}>"
   end
 
-  def match(uri, unescape=true)
+  def match(uri)
     match = anchored_regexp.match(uri) or return
-    result = {}; vars = variables
-    match.captures.each_with_index do |cap,i|
-      # inlines Doze::Utils.unescape, but with gsub! rather than gsub
-      cap.gsub!(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')} if unescape
-      result[vars[i]] = cap
+    result = {}; captures = match.captures
+    variables.each_with_index do |var, index|
+      result[var.name] = var.translate_captured_string(captures[index])
     end
     result
   end
 
-  def match_with_trailing(uri, unescape=true)
+  def match_with_trailing(uri)
     match = start_anchored_regexp.match(uri) or return
-    result = {}; vars = variables
-    match.captures.each_with_index do |cap,i|
-      # inlines Doze::Utils.unescape, but with gsub! rather than gsub
-      cap.gsub!(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')} if unescape
-      result[vars[i]] = cap
+    result = {}; captures = match.captures
+    variables.each_with_index do |var, index|
+      result[var.name] = var.translate_captured_string(captures[index])
     end
     trailing = match.post_match
     trailing = nil if trailing.empty?
@@ -83,7 +84,7 @@ class Doze::URITemplate
       "{#{@name}}"
     end
 
-    def variables; @variables ||= [@name]; end
+    def variables; [self]; end
 
     def expand(vars)
       Doze::Utils.escape(vars[@name].to_s)
@@ -91,10 +92,15 @@ class Doze::URITemplate
 
     def partially_expand(vars)
       if vars.has_key?(@name)
-        String.new(Doze::Utils.escape(vars[@name].to_s))
+        String.new(expand(vars))
       else
         self
       end
+    end
+
+    def translate_captured_string(string)
+      # inlines Doze::Utils.unescape, but with gsub! rather than gsub since this is faster and the matched string is throwaway
+      string.gsub!(/((?:%[0-9a-fA-F]{2})+)/n) {[$1.delete('%')].pack('H*')}; string
     end
 
     # String#size under Ruby 1.8 and String#bytesize under 1.9.
@@ -103,6 +109,31 @@ class Doze::URITemplate
     # inlines Doze::Utils.escape (optimised from Rack::Utils.escape) with further effort to avoid an extra method call for bytesize 1.9 compat.
     def expand_code_fragment
       "\#{vars[#{@name.inspect}].to_s.gsub(/([^a-zA-Z0-9_.-]+)/n) {'%'+$1.unpack('H2'*$1.#{BYTESIZE_METHOD}).join('%').upcase}}"
+    end
+  end
+
+  class QuadHexBytesVariable < Variable
+    REGEXP = "(?:/[0-9a-f]{2}){4}"
+
+    def initialize(name)
+      super(name, REGEXP)
+    end
+
+    def to_s
+      "{/#{@name}.quadhexbytes*}"
+    end
+
+    def expand(vars)
+      hex = vars[@name].to_i.to_s(16).rjust(8,'0')
+      "/#{hex[0..1]}/#{hex[2..3]}/#{hex[4..5]}/#{hex[6..7]}"
+    end
+
+    def expand_code_fragment
+      "/\#{hex=vars[#{@name.inspect}].to_i.to_s(16).rjust(8,'0');hex[0..1]}/\#{hex[2..3]}/\#{hex[4..5]}/\#{hex[6..7]}"
+    end
+
+    def translate_captured_string(string)
+      string.tr('/','').to_i(16)
     end
   end
 
