@@ -30,7 +30,7 @@ class Doze::Responder
 
   def call
     begin
-      response.finish
+      response().finish
     rescue Doze::Error => error
       error_response_from_error(error).finish
     rescue => exception

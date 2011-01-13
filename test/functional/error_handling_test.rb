@@ -97,4 +97,11 @@ class ErrorHandlingTest < Test::Unit::TestCase
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status
   end
 
+  def test_get_unavailable_resource
+    root.expects(:get).raises(Doze::ResourceUnavailableError.new)
+
+    get
+    assert_equal STATUS_SERVICE_UNAVAILABLE, last_response.status
+  end
+
 end
