@@ -49,7 +49,7 @@ Gem.manage_gems if Gem::RubyGemsVersion < '1.2.0'
 spec = Gem::Specification.new do |s|
   s.name   = "doze"
   s.summary = "RESTful resource-oriented API framework"
-  s.version = '0.0.5'
+  s.version = '0.0.6'
   s.platform = Gem::Platform::RUBY
   s.author = 'Matthew Willson'
   # s.description = ''
