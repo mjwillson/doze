@@ -27,6 +27,13 @@ class Doze::ClientEntityError < Doze::ClientError
   end
 end
 
+# Unbeknownst at the time of routing, the resource is not actually there.
+class Doze::ResourceNotFoundError < Doze::ClientError
+  def initialize(message=nil)
+    super(Doze::Utils::STATUS_NOT_FOUND, message)
+  end
+end
+
 # Can be used for any error at the resource level which is caused by client error.
 # Should relate to a problem processing the resource-level semantics of a request,
 # rather than a syntactic error in a submitted entity representation.
@@ -46,7 +53,7 @@ class Doze::ServerError < Doze::Error; end
 # indicate that this is a temporary situation and is due, like the error says,
 # to the resource, or some dependency of it, being unavailable.
 # This translates to a 503, innit.
-class Doze::ResourceUnavailableError < Doze::Error
+class Doze::ResourceUnavailableError < Doze::ServerError
   def initialize(message=nil)
     super(Doze::Utils::STATUS_SERVICE_UNAVAILABLE, message)
   end

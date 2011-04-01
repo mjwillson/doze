@@ -104,4 +104,11 @@ class ErrorHandlingTest < Test::Unit::TestCase
     assert_equal STATUS_SERVICE_UNAVAILABLE, last_response.status
   end
 
+  def test_not_found_error
+    root.expects(:get).raises(Doze::ResourceNotFoundError.new)
+
+    get
+    assert_equal STATUS_NOT_FOUND, last_response.status
+  end
+
 end
