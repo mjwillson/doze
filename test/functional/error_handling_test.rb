@@ -80,7 +80,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
   def test_exception_within_error_resource_code
     app(:error_resource_class => CustomErrorResource, :catch_application_errors => true)
 
-    CustomErrorResource.any_instance.expects(:get).raises(FooException)
+    CustomErrorResource.any_instance.expects(:get).at_least_once.raises(FooException)
 
     root.expects(:exists?).returns(false).at_least_once
     get

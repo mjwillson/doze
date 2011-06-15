@@ -121,7 +121,6 @@ class SerializationTest < Test::Unit::TestCase
   def test_put_multipart
     root.expects(:supports_put?).returns(true)
     root.expects(:put).with do |entity|
-      puts entity.object_data.inspect
       entity.object_data["z"] == {"y" => "x"} and
       file = entity.object_data["x"] and
       file.is_a?(Hash) and
