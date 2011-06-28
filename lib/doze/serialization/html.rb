@@ -79,6 +79,8 @@ END
             case part
             when Doze::URITemplate::String
               Rack::Utils.escape_html(part.string)
+            when Doze::URITemplate::QuadHexBytesVariable
+              "/<input name='#{Rack::Utils.escape_html(part.name)}'>"
             when Doze::URITemplate::Variable
               "<input name='#{Rack::Utils.escape_html(part.name)}'>"
             end
@@ -88,6 +90,8 @@ END
             case part
             when Doze::URITemplate::String
               part.string.to_json
+            when Doze::URITemplate::QuadHexBytesVariable
+              i += 1; "(v = parseInt(this.elements[#{i}].value, '10').toString(16), (new Array(9-v.length).join('0')+v).replace(/(..)/g, '/$1'))"
             when Doze::URITemplate::Variable
               i += 1; "this.elements[#{i}].value"
             end
