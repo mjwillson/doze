@@ -1,10 +1,75 @@
-Collection resources
- - Hash / Map
- - Array
+Get rid of global entity class / media type registration
+ - Make the entity classes and media types used, configurable on the responder
 
-ORM resource wrappers
+Responder
+ - Maybe rename to 'Controller' which is closer to what it is
+
+Routing:
+  - Get rid of the propagate_static_routes stuff
+    - Too magical
+    - Was originally a workaround for telling global singleton resources about their URIs at runtime,
+      which was a Bad approach, support for it should be deprecated / removed once we can
+  - Better facilities for routing to fixed subresource instances from non-singleton resources, eg
+    def initialize(uri)
+      @uri = uri
+      @foo = new_routed_subresource('/foo') {|uri| FooSubresource.new(uri)}
+    end
+
+  - Route via an instance method, eg
+    route '/foo/{id}', :method => :make_foo
+
+    def make_foo(uri, params)
+      Foo.new(uri, params[:id])
+    end
+
+  - Maybe some kind of routing registry to help construct resources from the top level
+    when they're constructed routed via some chain of parent resources?
+    Doesn't technically need to be a part of doze, but could be useful in the absence
+    of global singleton resources or resource factory-like classes via which one can
+    obtain things
+
+  - General review and cleanup of routing code
+    - Too many fiddly combinations of options to route
+    - Do we need the class-level routeset / instance-level routeset inheritance stuff
+    - can we find a simpler more general way of facilitating stuff with less special cases
+    - :uniquely_to can go with the propagate_static_routes
+    - instance_specific add_routes shouldn't need a router parameter to its routing block
+
+Sessions:
+  - Maybe always pass session to all get/put/post/etc methods
+  - Maybe just pass the rack env as the session, with config for a class which can be
+    used to wrap it, defaulting to Doze::Request or Rack::Request
+  - Maybe in general relax a bit and be prepared to mix the resource-level interface with
+    lower-level rack/HTTP concepts, eg passing in rack env directly, where it makes the
+    interface simpler
+
+REST Method interface
+  - rather than method_allowed?, just make get, put, post etc private or protected methods
+    by default, and make them 'allowed' when they're made public methods.
+    Simpler and more like the Rubyish.
+    if methods want to use instance-specific logic to determine whether the method is allowed,
+    they could just raise a special exception signalling 405
+
+  4xx error scenarios:
+    - Allow get/put/post/etc to raise exceptions for things like 403, 404 etc
+    - Maybe remove some of the special bits of interface like .authorize, .exists?
+      for determining 4xx states, in favour of the above
+    - keep the interface small and allows you to signal these problems at a later
+      stage in proceedings
+    - only problem is some of the controller logic uses a separate .exists? check
+    - maybe exists? could return true/false/nil - where nil indicates that you have
+      to 'suck it and see' via a call to get
+
+  Make the REST interface support more modular, so eg
+    - core with just the basic HTTP method support, add on other things as mixins like eg
+    - media type negotiation
+    - cache-control support
+    - if-modified-since support
+    - conditional put/post
+
+  Maybe remove some things that aren't being used
 
 Tests:
  - Refactor to be more DRY
- - Perhaps use test/spec
+ - Perhaps use minitest/spec or another spec-like framework
  - Cover more corner-cases and combinations of features working together
