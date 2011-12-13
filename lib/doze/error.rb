@@ -44,6 +44,19 @@ class Doze::ClientResourceError < Doze::ClientError
   end
 end
 
+# Can be used if you want to deny an action, but you couldn't do it at the time
+# of routing (which you could have done with Router#authorize_routing)
+class Doze::UnauthorizedError < Doze::ClientError
+  def initialize(reason='unauthorized')
+    super(Doze::Utils::STATUS_UNAUTHORIZED, reason)
+  end
+end
+class Doze::ForbiddenError < Doze::ClientError
+  def initialize(reason='forbidden')
+    super(Doze::Utils::STATUS_FORBIDDEN, reason)
+  end
+end
+
 # You can raise this if there is some problem internally that can't be handled
 # by the resource
 class Doze::ServerError < Doze::Error; end
@@ -58,3 +71,4 @@ class Doze::ResourceUnavailableError < Doze::ServerError
     super(Doze::Utils::STATUS_SERVICE_UNAVAILABLE, message)
   end
 end
+

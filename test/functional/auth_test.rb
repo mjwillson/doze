@@ -53,4 +53,17 @@ class AuthTest < Test::Unit::TestCase
     other_request_method('PATCH', {'REMOTE_USER' => 'username'})
     assert_equal STATUS_FORBIDDEN, last_response.status
   end
+
+  def test_can_raise_unauthd_errors
+    root.expects(:get).raises(Doze::UnauthorizedError.new('no homers allowed'))
+    assert_equal STATUS_UNAUTHORIZED, get.status
+    assert_match /Unauthorized\: no homers allowed/, last_response.body
+  end
+
+  def test_can_raise_forbidden_errors
+    root.expects(:get).raises(Doze::ForbiddenError.new('do not go there, girlfriend'))
+    assert_equal STATUS_FORBIDDEN, get.status
+    assert_match /Forbidden\: do not go there, girlfriend/, last_response.body
+  end
+
 end
