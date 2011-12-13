@@ -45,7 +45,8 @@ class Doze::ClientResourceError < Doze::ClientError
 end
 
 # Can be used if you want to deny an action, but you couldn't do it at the time
-# of routing (which you could have done with Router#authorize_routing)
+# of routing (which you could have done with Router#authorize_routing) or if you
+# want to include an error reason with the response
 class Doze::UnauthorizedError < Doze::ClientError
   def initialize(reason='unauthorized')
     super(Doze::Utils::STATUS_UNAUTHORIZED, reason)
