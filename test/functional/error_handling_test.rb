@@ -52,6 +52,23 @@ class ErrorHandlingTest < Test::Unit::TestCase
     assert_equal "foo bar baz", last_response.body
   end
 
+  def test_custom_error_resource_can_access_original_error
+    e = CustomErrorResource.new(STATUS_NOT_FOUND, 'Not Found: Oi!')
+
+    CustomErrorResource.expects(:new).with(STATUS_NOT_FOUND, 'Not Found: Oi!', has_key(:error)).returns(e).once
+    entity = Doze::Entity.new(Doze::MediaType['text/html'], :binary_data => "foo bar baz")
+    e.expects(:get).returns(entity).once
+
+
+    app(:error_resource_class => CustomErrorResource)
+    root.expects(:get).raises(Doze::ResourceNotFoundError, 'Oi!')
+
+    get
+    assert_equal STATUS_NOT_FOUND, last_response.status
+    assert_equal 'text/html', last_response.media_type
+    assert_equal "foo bar baz", last_response.body
+  end
+
   def test_error_without_error_resource
     root.expects(:exists?).returns(false).at_least_once
     app(:error_resource_class => nil)
