@@ -45,32 +45,3 @@ desc "Generate all documentation"
 task 'generate_docs' => ['clobber_rdoc', 'rdoc']
 
 Gem.manage_gems if Gem::RubyGemsVersion < '1.2.0'
-
-spec = Gem::Specification.new do |s|
-  s.name   = "doze"
-  s.summary = "RESTful resource-oriented API framework"
-  s.version = '0.0.5'
-  s.platform = Gem::Platform::RUBY
-  s.author = 'Matthew Willson'
-  # s.description = ''
-  # s.email = ''
-  # s.homepage = ''
-  # s.rubyforge_project = ''
-
-  s.add_dependency('rack', '~> 1.0')
-
-  s.has_rdoc = true
-  s.extra_rdoc_files = ['README']
-  s.rdoc_options << '--title' << 'Doze' << '--main' << 'README' << '--line-numbers'
-  s.files = FileList['{lib,test}/**/*.rb', '[A-Z]*'].exclude('TODO').to_a
-end
-
-Rake::GemPackageTask.new(spec) do |package|
-  package.need_zip = true
-  package.need_tar = true
-end
-
-desc 'Generate gemspec file for github.'
-task :update_gemspec do
-  File.open('doze.gemspec', 'w') {|output| output << spec.to_ruby}
-end
