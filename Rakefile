@@ -43,3 +43,5 @@ end
 
 desc "Generate all documentation"
 task 'generate_docs' => ['clobber_rdoc', 'rdoc']
+
+Gem.manage_gems if Gem::RubyGemsVersion < '1.2.0'
