@@ -1,5 +1,4 @@
 require 'doze/serialization/json'
-require 'doze/serialization/yaml'
 require 'doze/serialization/www_form_encoded'
 require 'doze/serialization/multipart_form_data'
 require 'doze/serialization/html'
@@ -10,7 +9,7 @@ module Doze::Serialization
   module Resource
     # You probably want to override these
     def serialization_media_types
-      [JSON, YAML, HTML]
+      [JSON, HTML]
     end
 
     # Analogous to get, but returns data which may be serialized into entities of any one of serialization_media_types

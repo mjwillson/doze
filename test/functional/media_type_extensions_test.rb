@@ -84,9 +84,9 @@ class MediaTypeExtensionsTest < Test::Unit::TestCase
 
     root.expects(:get).raises(RuntimeError, "test error")
 
-    get("/.yaml")
+    get("/.json")
     assert_equal STATUS_INTERNAL_SERVER_ERROR, last_response.status
-    assert_equal 'application/yaml', last_response.media_type
+    assert_equal 'application/json', last_response.media_type
   end
 
   def test_affects_representation_of_not_found_error_when_requested_media_type_not_available
@@ -94,9 +94,9 @@ class MediaTypeExtensionsTest < Test::Unit::TestCase
 
     root.expects(:get).returns([mock_entity('foo', 'text/html')])
 
-    get("/.yaml")
+    get("/.json")
     assert_equal STATUS_NOT_FOUND, last_response.status
-    assert_equal 'application/yaml', last_response.media_type
+    assert_equal 'application/json', last_response.media_type
   end
 end
 

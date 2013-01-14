@@ -23,10 +23,6 @@ class SerializationTest < Test::Unit::TestCase
     put('CONTENT_TYPE' => 'application/json', :input => '{"foo":')
     assert_equal STATUS_BAD_REQUEST, last_response.status
     assert_match /parse/i, last_response.body
-
-    put('CONTENT_TYPE' => 'application/yaml', :input => '[x')
-    assert_equal STATUS_BAD_REQUEST, last_response.status
-    assert_match /parse/i, last_response.body
   end
 
   def test_semantic_client_error
@@ -59,32 +55,32 @@ class SerializationTest < Test::Unit::TestCase
     assert_equal @ruby_data.to_json, last_response.body
     assert_equal 'application/json', last_response.media_type
 
-    get('HTTP_ACCEPT' => 'application/yaml')
+    get('HTTP_ACCEPT' => 'text/html')
     assert_equal STATUS_OK, last_response.status
-    assert_equal @ruby_data.to_yaml, last_response.body
-    assert_equal 'application/yaml', last_response.media_type
+    assert_equal 'text/html', last_response.media_type
   end
 
   def test_put_serialized
     root.expects(:supports_put?).returns(true).twice
-    root.expects(:put).with {|entity| entity.object_data == @ruby_data}.twice
+    root.expects(:put).with {|entity| entity.object_data == @ruby_data}.once
 
     put('CONTENT_TYPE' => 'application/json', :input => @ruby_data.to_json)
     assert_equal STATUS_NO_CONTENT, last_response.status
 
     put('CONTENT_TYPE' => 'application/yaml', :input => @ruby_data.to_yaml)
-    assert_equal STATUS_NO_CONTENT, last_response.status
+    assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
   end
 
   def test_post_serialized
     root.expects(:supports_post?).returns(true).twice
-    root.expects(:post).with {|entity| entity.object_data == @ruby_data}.twice
+    root.expects(:post).with {|entity| entity.object_data == @ruby_data}.once
 
     post('CONTENT_TYPE' => 'application/json', :input => @ruby_data.to_json)
     assert_equal STATUS_NO_CONTENT, last_response.status
 
+    # YAML is disabled by default
     post('CONTENT_TYPE' => 'application/yaml', :input => @ruby_data.to_yaml)
-    assert_equal STATUS_NO_CONTENT, last_response.status
+    assert_equal STATUS_UNSUPPORTED_MEDIA_TYPE, last_response.status
   end
 
   def test_form_post
@@ -102,20 +98,15 @@ class SerializationTest < Test::Unit::TestCase
   end
 
   def test_get_derived_type_via_generic_accept
-    derived_media_types = [Doze::Serialization::JSON, Doze::Serialization::YAML].map {|x| x.register_derived_type('application/vnd.foo.bar')}
+    derived_media_types = [Doze::Serialization::JSON].map {|x| x.register_derived_type('application/vnd.foo.bar')}
 
-    root.expects(:get_data).returns(@ruby_data).twice
-    root.expects(:serialization_media_types).returns(derived_media_types).twice
+    root.expects(:get_data).returns(@ruby_data).once
+    root.expects(:serialization_media_types).returns(derived_media_types).once
 
     get('HTTP_ACCEPT' => 'application/json')
     assert_equal STATUS_OK, last_response.status
     assert_equal @ruby_data.to_json, last_response.body
     assert_equal 'application/vnd.foo.bar+json', last_response.media_type
-
-    get('HTTP_ACCEPT' => 'application/yaml')
-    assert_equal STATUS_OK, last_response.status
-    assert_equal @ruby_data.to_yaml, last_response.body
-    assert_equal 'application/vnd.foo.bar+yaml', last_response.media_type
   end
 
   def test_put_multipart

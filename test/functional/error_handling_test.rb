@@ -29,7 +29,7 @@ class ErrorHandlingTest < Test::Unit::TestCase
 
     get('HTTP_ACCEPT' => 'application/yaml')
     assert_equal STATUS_NOT_FOUND, last_response.status
-    assert_equal 'application/yaml', last_response.media_type
+    assert_equal 'application/json', last_response.media_type
 
     # Failure of negotiation should be ignored for an error resource, not result in a STATUS_NOT_ACCEPTABLE
     get('HTTP_ACCEPT' => 'application/bollocks')
